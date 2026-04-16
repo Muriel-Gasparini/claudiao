@@ -1,10 +1,8 @@
 package tui
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -13,16 +11,40 @@ type screen int
 
 const (
 	screenWelcome screen = iota
-	screenQuit
+	screenModules
+	screenDone
 )
 
+type Module struct {
+	ID      string
+	Name    string
+	Desc    string
+	Count   int
+	Enabled bool
+}
+
 type Model struct {
-	screen      screen
-	cursor      int
+	screen screen
+	width  int
+	height int
+
 	claudePath  string
 	claudeThere bool
-	width       int
-	height      int
+
+	welcomeCursor int
+
+	modules       []Module
+	modulesCursor int
+}
+
+func defaultModules() []Module {
+	return []Module{
+		{ID: "rules", Name: "Rules", Desc: "Global conventions and behavior rules", Count: 6, Enabled: true},
+		{ID: "commands", Name: "Commands", Desc: "Slash commands for SDD flow", Count: 7, Enabled: true},
+		{ID: "agents", Name: "Agents", Desc: "SDD sub-agent definitions", Count: 7, Enabled: true},
+		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator persona", Count: 1, Enabled: true},
+		{ID: "templates", Name: "Templates", Desc: "Spec templates (discover/design/tasks)", Count: 4, Enabled: true},
+	}
 }
 
 func New() Model {
@@ -33,35 +55,26 @@ func New() Model {
 		screen:      screenWelcome,
 		claudePath:  path,
 		claudeThere: err == nil,
+		modules:     defaultModules(),
 	}
 }
 
 func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+	if sm, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = sm.Width
+		m.height = sm.Height
 		return m, nil
+	}
 
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < 1 {
-				m.cursor++
-			}
-		case "enter":
-			if m.cursor == 1 {
-				return m, tea.Quit
-			}
-		}
+	switch m.screen {
+	case screenWelcome:
+		return updateWelcome(m, msg)
+	case screenModules:
+		return updateModules(m, msg)
+	case screenDone:
+		return updateDone(m, msg)
 	}
 	return m, nil
 }
@@ -69,45 +82,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	switch m.screen {
 	case screenWelcome:
-		return m.viewWelcome()
-	default:
-		return ""
+		return viewWelcome(m)
+	case screenModules:
+		return viewModules(m)
+	case screenDone:
+		return viewDone(m)
 	}
-}
-
-func (m Model) viewWelcome() string {
-	title := titleStyle.Render("claudiao")
-	subtitle := mutedStyle.Render("SDD framework installer for Claude Code")
-
-	var status string
-	if m.claudeThere {
-		status = okStyle.Render("✓ detected ") + mutedStyle.Render(m.claudePath)
-	} else {
-		status = warnStyle.Render("! not found ") + mutedStyle.Render(m.claudePath+" will be created")
-	}
-
-	choices := []string{"Continue", "Abort"}
-	var lines []string
-	for i, c := range choices {
-		cursor := "  "
-		style := itemStyle
-		if m.cursor == i {
-			cursor = cursorStyle.Render("▸ ")
-			style = selectedItemStyle
-		}
-		lines = append(lines, cursor+style.Render(c))
-	}
-
-	body := strings.Join([]string{
-		title,
-		subtitle,
-		"",
-		status,
-		"",
-		strings.Join(lines, "\n"),
-	}, "\n")
-
-	help := helpStyle.Render("↑/↓ navigate · enter select · q quit")
-
-	return fmt.Sprintf("%s\n\n%s", boxStyle.Render(body), help)
+	return ""
 }
