@@ -1,0 +1,23 @@
+# Binaries
+/claudiao
+/dist/
+*.exe
+*.test
+*.out
+
+# Go
+/vendor/
+*.prof
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local
+.env
+.env.local
