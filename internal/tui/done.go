@@ -16,7 +16,7 @@ func updateDone(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q", "enter", "esc":
 		return m, tea.Quit
 	case "b":
-		m.screen = screenModules
+		m.screen = screenMode
 	}
 	return m, nil
 }
@@ -36,11 +36,19 @@ func viewDone(m Model) string {
 		lines = append(lines, warnStyle.Render("no modules selected"))
 	}
 
+	modeName := "Copy"
+	if m.mode == ModeSymlink {
+		modeName = "Symlink"
+	}
+	modeLine := mutedStyle.Render("mode: ") + selectedItemStyle.Render(modeName)
+
 	body := strings.Join([]string{
 		title,
 		subtitle,
 		"",
 		strings.Join(lines, "\n"),
+		"",
+		modeLine,
 	}, "\n")
 
 	help := helpStyle.Render("b back · enter quit")

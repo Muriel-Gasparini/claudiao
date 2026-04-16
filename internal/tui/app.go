@@ -12,7 +12,15 @@ type screen int
 const (
 	screenWelcome screen = iota
 	screenModules
+	screenMode
 	screenDone
+)
+
+type InstallMode int
+
+const (
+	ModeCopy InstallMode = iota
+	ModeSymlink
 )
 
 type Module struct {
@@ -35,6 +43,9 @@ type Model struct {
 
 	modules       []Module
 	modulesCursor int
+
+	mode       InstallMode
+	modeCursor int
 }
 
 func defaultModules() []Module {
@@ -73,6 +84,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateWelcome(m, msg)
 	case screenModules:
 		return updateModules(m, msg)
+	case screenMode:
+		return updateMode(m, msg)
 	case screenDone:
 		return updateDone(m, msg)
 	}
@@ -85,6 +98,8 @@ func (m Model) View() string {
 		return viewWelcome(m)
 	case screenModules:
 		return viewModules(m)
+	case screenMode:
+		return viewMode(m)
 	case screenDone:
 		return viewDone(m)
 	}

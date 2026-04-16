@@ -40,7 +40,7 @@ func updateModules(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.screen = screenWelcome
 	case "enter":
 		if anyEnabled(m.modules) {
-			m.screen = screenDone
+			m.screen = screenMode
 		}
 	}
 	return m, nil
