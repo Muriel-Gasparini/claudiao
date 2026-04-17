@@ -67,11 +67,10 @@ type installResult struct {
 
 func defaultModules() []Module {
 	return []Module{
-		{ID: "rules", Name: "Rules", Desc: "Global conventions and behavior rules", Count: 6, Enabled: true},
-		{ID: "commands", Name: "Commands", Desc: "Slash commands for SDD flow", Count: 7, Enabled: true},
-		{ID: "agents", Name: "Agents", Desc: "SDD sub-agent definitions", Count: 7, Enabled: true},
-		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator persona", Count: 1, Enabled: true},
-		{ID: "templates", Name: "Templates", Desc: "Spec templates (discover/design/tasks)", Count: 4, Enabled: true},
+		{ID: "core", Name: "Core", Desc: "CLAUDE.md — global SDD flow and rules index", Count: 1, Enabled: true},
+		{ID: "rules", Name: "Rules", Desc: "Global behavior rules (testing, git, concision, etc)", Count: 5, Enabled: true},
+		{ID: "agents", Name: "Agents", Desc: "SDD sub-agent definitions (PO, architect, dev lead, …)", Count: 6, Enabled: true},
+		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator and per-phase personas", Count: 7, Enabled: true},
 	}
 }
 

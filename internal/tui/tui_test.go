@@ -37,8 +37,8 @@ func isQuit(cmd tea.Cmd) bool {
 
 func TestDefaultModules(t *testing.T) {
 	mods := defaultModules()
-	if len(mods) != 5 {
-		t.Fatalf("expected 5 modules, got %d", len(mods))
+	if len(mods) != 4 {
+		t.Fatalf("expected 4 modules, got %d", len(mods))
 	}
 	for _, m := range mods {
 		if !m.Enabled {
