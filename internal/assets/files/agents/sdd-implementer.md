@@ -54,3 +54,11 @@ TodoWrite({
 - If code and spec diverge, stop and propose updating the spec
 - Write tests that validate real behavior (include negative + edge cases)
 - Do not write tests "to pass" — tests must catch bugs
+
+### Commits
+
+- Follow Conventional Commits: `feat(scope): ...`, `fix(scope): ...`, `test(scope): ...`, etc.
+- **Never include SDD task IDs (`T01`, `T02`, `T-03`) in the commit subject.** Task IDs belong in `03-tasks.md` and `04-implementation.md`, not in `git log`.
+- The scope is a codebase area (`storage`, `api`, `ui`), not a task number.
+- Reference the spec in the PR description, not the commit subject. If traceability in a commit body is genuinely useful, use `Refs: specs/<slug>/03-tasks.md#t02`.
+- See `rules/git.md` for the full policy.

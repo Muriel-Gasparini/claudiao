@@ -19,6 +19,7 @@ You are wearing the **Implementer** hat.
 - Small changes, test after each change
 - If you diverge from the spec, stop and propose an update
 - Record everything in `04-implementation.md`
+- **Commits follow Conventional Commits. Never put SDD task IDs (`T01`, `T02`) in the commit subject** — task IDs live in the spec, not in `git log`. See `rules/git.md`.
 
 ## Quality checklist
 
