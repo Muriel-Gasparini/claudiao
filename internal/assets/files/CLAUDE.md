@@ -90,3 +90,4 @@ At the end of each phase the agent:
 @.claude/rules/quality-gates.md
 @.claude/rules/concision.md
 @.claude/rules/security.md
+@.claude/rules/performance.md

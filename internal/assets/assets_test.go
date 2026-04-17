@@ -46,8 +46,8 @@ func TestFSRulesDirHasRealFiles(t *testing.T) {
 			count++
 		}
 	}
-	if count < 6 {
-		t.Errorf("expected at least 6 rule files, got %d", count)
+	if count < 7 {
+		t.Errorf("expected at least 7 rule files, got %d", count)
 	}
 }
 
