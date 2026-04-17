@@ -89,3 +89,4 @@ At the end of each phase the agent:
 @.claude/rules/git.md
 @.claude/rules/quality-gates.md
 @.claude/rules/concision.md
+@.claude/rules/security.md
