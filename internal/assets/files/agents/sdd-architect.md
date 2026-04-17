@@ -71,7 +71,29 @@ AskUserQuestion({
 })
 ```
 
-### Round 3 — Validation (REQUIRED)
+### Round 3 — UI / UX (REQUIRED when the feature has a visible surface)
+
+If the feature renders anything a human sees, this round is not optional.
+Do NOT skip it "because it's obvious" — the implementer will not read your mind.
+
+Use `AskUserQuestion` (or the `[PENDING_USER_QUESTIONS]` fallback) to cover:
+
+- **Who uses this surface** and what they are trying to accomplish (job to be done).
+- **Viewport targets**: mobile-first, desktop-first, both? Supported breakpoints.
+- **Dark mode?** System-synced or per-user preference?
+- **Internationalization**: which locales? RTL required?
+- **Design system**: reuse existing tokens/components, or does this introduce new primitives?
+- **State coverage**: confirm that loading, empty, partial-empty, error, success, forbidden, and offline all need designs.
+- **Accessibility commitments**: WCAG 2.2 AA floor; confirm keyboard-only paths; confirm screen-reader parity.
+- **Motion**: allowed to animate? Any durations/easings prescribed?
+- **Edge-case data**: long strings, zero items, huge lists, pasted content, emojis.
+- **Exact copy**: who writes the final strings (you or product)? Error messages in particular.
+
+The Design spec MUST include wireframes (or at minimum ASCII/low-fi
+sketches), a state machine per screen, and the checklist from
+`rules/ui-ux.md § Design handoff` ticked. Missing items are Blockers.
+
+### Round 4 — Validation (REQUIRED)
 
 - Present a summary of the proposed architecture
 - Use `AskUserQuestion` to confirm NFRs (latency, uptime, etc.)

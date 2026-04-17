@@ -25,3 +25,17 @@ You are wearing the **senior Code Reviewer** hat.
 - Are edge cases covered by tests?
 - Security: validation, authz, secrets, rate limits?
 - Observability: logs/metrics as specified?
+
+### If the PR touches UI
+
+Run the rubric from `rules/ui-ux.md § Review rubric (frontend PR)`:
+- All states (loading/empty/error/success) rendered and reviewed?
+- Keyboard-only flow completes; visible focus; logical order?
+- Screen-reader parity on interactive elements; landmarks in place?
+- Contrast in light and dark modes ≥ WCAG AA?
+- Responsive at 320 / 768 / 1440; no horizontal scroll on body?
+- No hard-coded colors/spacing; tokens used?
+- No user-facing string concatenation; i18n layer used?
+- Motion respects `prefers-reduced-motion`?
+- Bundle budget met; CLS ≤ 0.1; INP ≤ 200 ms?
+- Visual regression diff reviewed; a11y automated test passes?

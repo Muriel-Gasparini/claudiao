@@ -107,6 +107,7 @@ When in doubt, rank upward. False negatives are worse than false positives.
 - [ ] Rollout / migration plan with rollback
 - [ ] Security considerations (cross-ref `rules/security.md`)
 - [ ] Performance considerations (cross-ref `rules/performance.md`)
+- [ ] **If the feature has a UI**: handoff checklist from `rules/ui-ux.md § Design handoff` fully ticked (wireframes for every state, state machine, responsive plan, tokens, a11y plan, motion plan, exact copy, i18n, edge-case data, analytics, perf budget)
 - [ ] Handoff section filled for the Dev Lead
 
 ### Tasks — `03-tasks.md`
@@ -139,6 +140,7 @@ When in doubt, rank upward. False negatives are worse than false positives.
 - [ ] Performance rubric from `rules/performance.md` run where applicable
 - [ ] Testing integrity checklist from `rules/testing.md` verified
 - [ ] Code quality checklist from `rules/code-quality.md` verified
+- [ ] **If the PR touches UI**: frontend rubric from `rules/ui-ux.md § Review rubric` verified
 - [ ] No must-fix items outstanding before Ready
 
 ### Ship — `06-ship.md`

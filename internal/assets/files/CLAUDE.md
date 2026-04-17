@@ -92,3 +92,4 @@ At the end of each phase the agent:
 @.claude/rules/security.md
 @.claude/rules/performance.md
 @.claude/rules/code-quality.md
+@.claude/rules/ui-ux.md
