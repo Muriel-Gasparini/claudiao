@@ -107,8 +107,12 @@ func Preview(req Request) (*Plan, error) {
 		if IsProtected(path) {
 			return nil
 		}
-		top := strings.SplitN(filepath.ToSlash(path), "/", 2)[0]
-		if len(modules) > 0 && !modules[top] {
+		parts := strings.SplitN(filepath.ToSlash(path), "/", 2)
+		group := parts[0]
+		if len(parts) == 1 {
+			group = "core"
+		}
+		if len(modules) > 0 && !modules[group] {
 			return nil
 		}
 		if filepath.Base(path) == ".gitkeep" || filepath.Base(path) == "README.md" {

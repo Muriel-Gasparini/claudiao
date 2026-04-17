@@ -9,12 +9,53 @@ import (
 
 func testAssets() fstest.MapFS {
 	return fstest.MapFS{
-		"rules/testing.md":      {Data: []byte("testing rules\n")},
-		"rules/git.md":          {Data: []byte("git rules\n")},
-		"commands/sdd-new.md":   {Data: []byte("command\n")},
-		"agents/product.md":     {Data: []byte("agent\n")},
-		"rules/.gitkeep":        {Data: []byte("")},
-		"README.md":             {Data: []byte("readme\n")},
+		"CLAUDE.md":           {Data: []byte("# Claude\n")},
+		"rules/testing.md":    {Data: []byte("testing rules\n")},
+		"rules/git.md":        {Data: []byte("git rules\n")},
+		"commands/sdd-new.md": {Data: []byte("command\n")},
+		"agents/product.md":   {Data: []byte("agent\n")},
+		"rules/.gitkeep":      {Data: []byte("")},
+		"README.md":           {Data: []byte("readme\n")},
+	}
+}
+
+func TestCoreModuleInstallsRootFiles(t *testing.T) {
+	dir := t.TempDir()
+	plan, err := Preview(Request{
+		ClaudePath: dir,
+		Assets:     testAssets(),
+		Modules:    []string{"core"},
+		Mode:       ModeCopy,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var foundClaude bool
+	for _, a := range plan.Actions {
+		if a.Source == "CLAUDE.md" {
+			foundClaude = true
+		}
+	}
+	if !foundClaude {
+		t.Error("expected CLAUDE.md in core module")
+	}
+	if len(plan.Actions) != 1 {
+		t.Errorf("expected only CLAUDE.md in core, got %d", len(plan.Actions))
+	}
+}
+
+func TestReadmeAtRootNotInstalledEvenWithCore(t *testing.T) {
+	dir := t.TempDir()
+	plan, _ := Preview(Request{
+		ClaudePath: dir,
+		Assets:     testAssets(),
+		Modules:    []string{"core"},
+		Mode:       ModeCopy,
+	})
+	for _, a := range plan.Actions {
+		if filepath.Base(a.Source) == "README.md" {
+			t.Error("README.md should be filtered out")
+		}
 	}
 }
 
@@ -23,14 +64,14 @@ func TestPreviewAllCreate(t *testing.T) {
 	plan, err := Preview(Request{
 		ClaudePath: dir,
 		Assets:     testAssets(),
-		Modules:    []string{"rules", "commands", "agents"},
+		Modules:    []string{"rules", "commands", "agents", "core"},
 		Mode:       ModeCopy,
 	})
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
-	if len(plan.Actions) != 4 {
-		t.Fatalf("expected 4 actions, got %d", len(plan.Actions))
+	if len(plan.Actions) != 5 {
+		t.Fatalf("expected 5 actions, got %d", len(plan.Actions))
 	}
 	for _, a := range plan.Actions {
 		if a.Kind != KindCreate {
