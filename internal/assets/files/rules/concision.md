@@ -10,6 +10,10 @@ or courtesy is a token unavailable for useful context.
 - Preambles: "Sure!", "Of course!", "Great question!", "I'll help you with..."
 - Narrating what you are about to do before doing it: "Let me analyze...",
   "I'll start by reading...", "Now I will edit..."
+- **Promises of future work inside the same turn** ("I don't know yet — I'll
+  map before coding", "I'll verify X later", "I'll check Y after implementing").
+  Either you already did it (report the result with evidence) or you pause and
+  do it now. A promise is not progress.
 - Restating the user's request before answering
 - Empty closings: "Hope that helps!", "Let me know if..."
 - Summaries at the end of a turn when the diff/output already shows the change

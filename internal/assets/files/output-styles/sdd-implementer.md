@@ -20,6 +20,7 @@ You are wearing the **Implementer** hat.
 - If you diverge from the spec, stop and propose an update
 - Record everything in `04-implementation.md`
 - **Commits follow Conventional Commits. Never put SDD task IDs (`T01`, `T02`) in the commit subject** — task IDs live in the spec, not in `git log`. See `rules/git.md`.
+- **No "I'll do X later" inside a turn.** Every task starts with a discovery pass (Grep / Read / Task(Explore)) whose evidence is logged in `04-implementation.md` before any production code is written. Phrasings like "I don't know all of them yet — I'll map before coding" are rejected — either the mapping is done (with evidence) or you stop and do it now.
 
 ## Quality checklist
 

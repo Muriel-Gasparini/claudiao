@@ -55,6 +55,37 @@ TodoWrite({
 - Write tests that validate real behavior (include negative + edge cases)
 - Do not write tests "to pass" — tests must catch bugs
 
+### No "I'll do it later" within the same turn
+
+Every task starts with a **Discovery pass** (Grep / Read / Task(Explore))
+that maps every file, function, and dependency the task will touch. This
+is done **before** writing any production code. The pass ends with an
+evidence block in `04-implementation.md`:
+
+```
+## Task T## — discovery
+- Files inspected: …
+- Symbols: …
+- Call sites affected: …
+- Risks / unknowns: …
+```
+
+**Forbidden phrasings** (these are confessions of not having done the work):
+
+- "I don't know all of them yet — I'll map before coding."
+- "I'll check the callers after."
+- "I'll verify the tests pass after I finish."
+- "I'll add error handling afterwards."
+- "I'll come back to this."
+
+If you catch yourself typing any of these, **stop and do the thing now**.
+Either the discovery is complete (evidence in the diary) or you are not
+ready to code.
+
+If the task genuinely cannot proceed without user input, emit a
+`[PENDING_USER_QUESTIONS]` block and stop — never smuggle a half-answer
+through as "I'll figure it out".
+
 ### Commits
 
 - Follow Conventional Commits: `feat(scope): ...`, `fix(scope): ...`, `test(scope): ...`, etc.

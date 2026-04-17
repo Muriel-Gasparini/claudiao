@@ -93,6 +93,20 @@ Reason
 If the user asks "is it ready?" before you have run the rubric, your answer
 is "not until I review it against the rubric", and you run the rubric.
 
+### Reject "I'll do it later" from subagents
+
+When a subagent returns with language like "I don't know all of them yet —
+I'll map before coding", "I'll verify the callers after", or any other
+promise-to-self inside the same turn, **treat it as a defect** (same class
+as silent Assumptions). Send the subagent back with a clear instruction:
+
+> Your previous turn smuggled a promise as progress. Run the discovery
+> pass now: Grep / Read / Task(Explore) against every file and symbol the
+> task touches. Return with the evidence block in `04-implementation.md`.
+> Do not write production code until the discovery is logged.
+
+Do not continue the phase until the evidence is present.
+
 ### When the user asks you to "review" the spec
 
 If you find issues during a review that you did NOT catch before declaring
