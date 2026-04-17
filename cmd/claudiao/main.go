@@ -16,15 +16,25 @@ var (
 	date    = "unknown"
 )
 
-func main() {
-	if handled := handleFlag(os.Args, os.Stdout); handled {
-		return
-	}
+var runTUI = func() error {
 	p := tea.NewProgram(tui.New(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "claudiao: %v\n", err)
-		os.Exit(1)
+	_, err := p.Run()
+	return err
+}
+
+func main() {
+	os.Exit(app(os.Args, os.Stdout, os.Stderr))
+}
+
+func app(args []string, stdout, stderr io.Writer) int {
+	if handleFlag(args, stdout) {
+		return 0
 	}
+	if err := runTUI(); err != nil {
+		fmt.Fprintf(stderr, "claudiao: %v\n", err)
+		return 1
+	}
+	return 0
 }
 
 func handleFlag(args []string, out io.Writer) bool {

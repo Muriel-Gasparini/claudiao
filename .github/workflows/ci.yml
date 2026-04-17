@@ -31,11 +31,22 @@ jobs:
       - name: Test with coverage
         run: go test -race -coverprofile=coverage.out ./...
 
-      - name: Enforce coverage floor (80%)
+      - name: Enforce coverage floor (80% total + per-package)
         run: |
-          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          go tool cover -func=coverage.out > /tmp/cov.txt
+          total=$(awk '/^total:/ {print $3}' /tmp/cov.txt | tr -d '%')
           echo "total coverage: ${total}%"
-          awk -v t="$total" 'BEGIN { if (t+0 < 80) { print "coverage below 80% floor"; exit 1 } }'
+          awk -v t="$total" 'BEGIN { if (t+0 < 80) { print "::error::total coverage " t "% is below 80% floor"; exit 1 } }'
+          fail=0
+          for pkg in $(go list ./... | grep -v '^$'); do
+            pct=$(go test -count=1 -cover "$pkg" 2>/dev/null | awk '/coverage:/ {gsub("%","",$5); print $5}')
+            if [ -z "$pct" ]; then
+              continue
+            fi
+            echo "  $pkg: $pct%"
+            awk -v p="$pct" -v pkg="$pkg" 'BEGIN { if (p+0 < 80) { print "::error::" pkg " coverage " p "% is below 80% floor"; exit 1 } }' || fail=1
+          done
+          if [ $fail -ne 0 ]; then exit 1; fi
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4

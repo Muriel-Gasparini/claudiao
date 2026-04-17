@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -51,5 +52,50 @@ func TestHandleFlagUnknownArg(t *testing.T) {
 	buf := &bytes.Buffer{}
 	if handleFlag([]string{"claudiao", "banana"}, buf) {
 		t.Error("unknown args should not be handled")
+	}
+}
+
+func TestAppHandlesFlagWithoutRunningTUI(t *testing.T) {
+	called := false
+	orig := runTUI
+	runTUI = func() error { called = true; return nil }
+	defer func() { runTUI = orig }()
+
+	stdout := &bytes.Buffer{}
+	code := app([]string{"claudiao", "version"}, stdout, &bytes.Buffer{})
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if called {
+		t.Error("TUI should not run when a flag is handled")
+	}
+	if !strings.Contains(stdout.String(), "claudiao") {
+		t.Errorf("expected version output, got %q", stdout.String())
+	}
+}
+
+func TestAppRunsTUISuccessfully(t *testing.T) {
+	orig := runTUI
+	runTUI = func() error { return nil }
+	defer func() { runTUI = orig }()
+
+	code := app([]string{"claudiao"}, &bytes.Buffer{}, &bytes.Buffer{})
+	if code != 0 {
+		t.Errorf("expected exit 0 on successful TUI run, got %d", code)
+	}
+}
+
+func TestAppReturnsOneOnTUIError(t *testing.T) {
+	orig := runTUI
+	runTUI = func() error { return errors.New("boom") }
+	defer func() { runTUI = orig }()
+
+	stderr := &bytes.Buffer{}
+	code := app([]string{"claudiao"}, &bytes.Buffer{}, stderr)
+	if code != 1 {
+		t.Errorf("expected exit 1 on TUI error, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "boom") {
+		t.Errorf("expected error in stderr, got %q", stderr.String())
 	}
 }

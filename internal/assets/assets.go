@@ -6,12 +6,15 @@ import (
 )
 
 //go:embed all:files
-var embedded embed.FS
+var files embed.FS
 
-func FS() fs.FS {
-	sub, err := fs.Sub(embedded, "files")
+var embeddedFS = mustSub(fs.Sub(files, "files"))
+
+func FS() fs.FS { return embeddedFS }
+
+func mustSub(f fs.FS, err error) fs.FS {
 	if err != nil {
-		panic(err)
+		panic("claudiao: assets embed broken: " + err.Error())
 	}
-	return sub
+	return f
 }
