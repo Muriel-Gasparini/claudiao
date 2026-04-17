@@ -30,6 +30,13 @@ API constraints (follow strictly):
 - `description` is required on every option
 - `multiSelect` is required (boolean)
 
+### If `AskUserQuestion` is not available in your runtime
+
+Never silently fall back to writing Assumptions — that is the failure mode
+this rule prevents. Instead, emit a `[PENDING_USER_QUESTIONS]` block (see
+`rules/clarifications.md`) with the same structure and **stop**. The
+orchestrator will ask the user and re-invoke you with the answers.
+
 ### Before anything
 
 Read `specs/<slug>/00-brief.md` and any other existing spec. Identify what is already known and what is missing.

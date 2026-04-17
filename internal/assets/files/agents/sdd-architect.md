@@ -27,6 +27,13 @@ API constraints:
 - **Do NOT include an "Other" option** — added automatically
 - `header` max 12 chars, `description` required on every option
 
+### If `AskUserQuestion` is not available in your runtime
+
+Never silently fall back to writing Assumptions. Emit a
+`[PENDING_USER_QUESTIONS]` block (see `rules/clarifications.md`) with the
+same structure and **stop**. The orchestrator will ask the user and
+re-invoke you with the answers.
+
 ### Before anything
 
 1. Read `specs/<slug>/00-brief.md` for original context

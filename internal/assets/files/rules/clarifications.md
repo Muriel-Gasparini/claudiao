@@ -157,6 +157,79 @@ Always evaluate and/or ask about (via AskUserQuestion):
 - data consistency (partially updated records)
 - i18n / formatting (dates / decimals) when relevant
 
-## Assumptions
+## When AskUserQuestion is unavailable
 
-If you must proceed without an answer, declare explicit **Assumptions** and ask the user to confirm afterwards.
+`AskUserQuestion` is required by default. When the tool is **not present in
+the current runtime** (subagent context, sandbox, restricted harness), the
+agent MUST NOT silently fall back to writing Assumptions. That is the same
+failure mode this rule is designed to prevent.
+
+### The only acceptable fallback
+
+**The orchestrator is the single point of contact with the user.** Every
+subagent or tool-restricted runtime surfaces its questions upward and waits.
+
+Protocol:
+
+1. The agent emits a **structured question block** back to its parent (the
+   orchestrator). The block uses the same shape as `AskUserQuestion` so the
+   orchestrator can replay it verbatim:
+
+   ```
+   [PENDING_USER_QUESTIONS]
+   {
+     "from": "sdd-architect",
+     "blocking": true,
+     "questions": [
+       {
+         "question": "…?",
+         "header": "Auth",
+         "multiSelect": false,
+         "options": [
+           { "label": "…", "description": "…" },
+           { "label": "…", "description": "…" }
+         ]
+       }
+     ]
+   }
+   [/PENDING_USER_QUESTIONS]
+   ```
+
+2. The subagent then **stops** — it does not produce a partial spec, does
+   not write Assumptions, does not invent answers.
+
+3. The orchestrator collects the block, asks the user with
+   `AskUserQuestion` (or plain structured text if it too lacks the tool),
+   then re-invokes the subagent with the answers injected into the prompt.
+
+4. The subagent resumes from the answers and continues. It MUST validate
+   that every answer it needed is actually present before proceeding.
+
+### Assumptions are a last resort
+
+`Assumptions` in a spec are **only** acceptable when:
+
+- The user explicitly said "just go, don't ask" and accepted unknown risk, **and**
+- Each assumption is tagged `⚠️ unvalidated` with: what was assumed, the
+  alternative considered, the risk of being wrong, and the owner to confirm.
+
+`Assumptions` are never a substitute for the interview just because a tool
+is missing. If the interview cannot happen, the phase is **not Ready**.
+
+### Orchestrator responsibility
+
+The orchestrator:
+- Treats subagent output containing `[PENDING_USER_QUESTIONS]` as a blocking
+  handoff. It does not discard, paraphrase, or fold it into its own prose.
+- Asks the user, using `AskUserQuestion` when available; otherwise renders
+  the same block as structured plain text following the same 2-4 option
+  rule, and waits.
+- Re-spawns or continues the subagent with the user's answers explicitly
+  included in the next prompt.
+- Never fills in answers on behalf of the user, even to "unblock".
+
+## Assumptions (general)
+
+If you must proceed without an answer (user explicitly opted out of the
+interview), declare explicit **Assumptions** with the tagging above and
+surface them at the top of the spec. Ask the user to confirm afterwards.
