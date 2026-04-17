@@ -38,7 +38,8 @@ func updateMode(m Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.screen = screenModules
 	case "enter":
 		m.mode = modeOptions[m.modeCursor].mode
-		m.screen = screenDone
+		m.screen = screenPreview
+		return m, buildPlanCmd(m)
 	}
 	return m, nil
 }

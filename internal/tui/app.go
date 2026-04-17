@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Muriel-Gasparini/claudiao/internal/installer"
 )
 
 type screen int
@@ -13,7 +15,9 @@ const (
 	screenWelcome screen = iota
 	screenModules
 	screenMode
-	screenDone
+	screenPreview
+	screenInstalling
+	screenResult
 )
 
 type InstallMode int
@@ -46,6 +50,19 @@ type Model struct {
 
 	mode       InstallMode
 	modeCursor int
+
+	plan        *installer.Plan
+	planErr     error
+	previewCur  int
+
+	spinnerFrame int
+	result       installResult
+}
+
+type installResult struct {
+	err        error
+	backupPath string
+	written    int
 }
 
 func defaultModules() []Module {
@@ -86,8 +103,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateModules(m, msg)
 	case screenMode:
 		return updateMode(m, msg)
-	case screenDone:
-		return updateDone(m, msg)
+	case screenPreview:
+		return updatePreview(m, msg)
+	case screenInstalling:
+		return updateInstalling(m, msg)
+	case screenResult:
+		return updateResult(m, msg)
 	}
 	return m, nil
 }
@@ -100,8 +121,49 @@ func (m Model) View() string {
 		return viewModules(m)
 	case screenMode:
 		return viewMode(m)
-	case screenDone:
-		return viewDone(m)
+	case screenPreview:
+		return viewPreview(m)
+	case screenInstalling:
+		return viewInstalling(m)
+	case screenResult:
+		return viewResult(m)
+	}
+	return ""
+}
+
+func (m Model) selectedModuleIDs() []string {
+	var ids []string
+	for _, mod := range m.modules {
+		if mod.Enabled {
+			ids = append(ids, mod.ID)
+		}
+	}
+	return ids
+}
+
+func (m Model) installerMode() installer.Mode {
+	if m.mode == ModeSymlink {
+		return installer.ModeSymlink
+	}
+	return installer.ModeCopy
+}
+
+func assetsDir() string {
+	if d := os.Getenv("CLAUDIAO_ASSETS_DIR"); d != "" {
+		return d
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	candidates := []string{
+		filepath.Join(filepath.Dir(exe), "internal/assets/files"),
+		filepath.Join(filepath.Dir(exe), "assets"),
+	}
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && info.IsDir() {
+			return c
+		}
 	}
 	return ""
 }
