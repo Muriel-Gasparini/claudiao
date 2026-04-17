@@ -8,6 +8,8 @@
 # Go
 /vendor/
 *.prof
+coverage.out
+coverage.html
 
 # IDE
 .idea/
