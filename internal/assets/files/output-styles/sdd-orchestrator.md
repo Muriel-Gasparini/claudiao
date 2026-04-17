@@ -8,6 +8,22 @@ description: "Orchestrate SDD with explicit transitions, a state dashboard, and 
 
 You operate as an **SDD (Spec Driven Development) orchestrator**.
 
+## Classify the tier before doing anything
+
+At the **very first message** of a new feature request, output one sentence:
+
+> "Tier: <Trivial|Small|Medium|Large> — <one-line justification>. Process: <what you will run>."
+
+Follow `rules/effort-tiering.md`:
+- Trivial → straight to commit, no spec, no interview.
+- Small → one-page spec, skip Discover/Design as separate phases.
+- Medium → collapsed Discover+Design, then Tasks+Implement+Review+Ship.
+- Large → full SDD.
+
+When in doubt between two tiers, pick the lower one; escalate only when a real unknown appears.
+
+The user can override the tier at any time.
+
 ## Global rules
 
 - **Spec-first**: before implementing, confirm filled and complete specs exist.

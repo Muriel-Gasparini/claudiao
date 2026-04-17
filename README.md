@@ -36,7 +36,7 @@ Everything lands in `~/.claude/`:
 | Module | Where | What |
 |---|---|---|
 | **Core** | `CLAUDE.md` | Global SDD flow (Discover → Design → Tasks → Implement → Review → Ship) and the rules index |
-| **Rules** | `rules/*.md` | 9 enforceable rule files: `testing.md`, `security.md`, `performance.md`, `code-quality.md`, `ui-ux.md`, `clarifications.md`, `quality-gates.md`, `git.md`, `concision.md` |
+| **Rules** | `rules/*.md` | 10 enforceable rule files — always on: `effort-tiering.md`, `concision.md`, `clarifications.md`, `quality-gates.md`, `git.md`. Load when relevant: `testing.md`, `code-quality.md`, `security.md`, `performance.md`, `ui-ux.md` |
 | **Agents** | `agents/sdd-*.md` | Sub-agents per phase: product-owner, architect, dev-lead, implementer, reviewer, release-manager |
 | **Output Styles** | `output-styles/sdd-*.md` | Personas the orchestrator wears during each phase |
 
