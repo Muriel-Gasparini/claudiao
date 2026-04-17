@@ -36,7 +36,7 @@ Everything lands in `~/.claude/`:
 | Module | Where | What |
 |---|---|---|
 | **Core** | `CLAUDE.md` | Global SDD flow (Discover → Design → Tasks → Implement → Review → Ship) and the rules index |
-| **Rules** | `rules/*.md` | Enforceable rules: testing integrity, concise output, git hygiene, quality gates, question protocol |
+| **Rules** | `rules/*.md` | 8 enforceable rule files: `testing.md`, `security.md`, `performance.md`, `code-quality.md`, `clarifications.md`, `quality-gates.md`, `git.md`, `concision.md` |
 | **Agents** | `agents/sdd-*.md` | Sub-agents per phase: product-owner, architect, dev-lead, implementer, reviewer, release-manager |
 | **Output Styles** | `output-styles/sdd-*.md` | Personas the orchestrator wears during each phase |
 
@@ -65,10 +65,13 @@ that is its **only** handoff.
 
 Rules are strict:
 
-- No implementation without a filled `01-discover.md`, `02-design.md`, and `03-tasks.md`.
-- Every agent runs an interview round (`AskUserQuestion`) before writing.
-- Tests must cover happy path, error path, and one real edge case — not mocks of your own code returning hard-coded values.
-- Coverage floor is 80% unit. Weak asserts are a bug.
+- **No implementation** without a filled `01-discover.md`, `02-design.md`, `03-tasks.md`.
+- Every interview agent asks via `AskUserQuestion` before writing. If the tool is missing in the runtime, the subagent emits a `[PENDING_USER_QUESTIONS]` block and **stops**; the orchestrator asks the user and re-invokes it. No silent Assumptions.
+- **Ready is evidence, not opinion.** The orchestrator runs the phase rubric adversarially, emits a `Blocker / Major / Minor` findings table, and only then declares Ready with an explicit `Evidence` block. "Looks good to me" is rejected at the gate.
+- **Testing**: no mocks of internal code, no tests written to pass, mutation-mental check on every function, happy-path + error + edge case required, coverage floor 80% unit.
+- **Security**: secrets never in repo/logs/URLs; parameterized queries; allow-list authz; SSRF guards; JWT `alg:none` rejected; CSRF on cookie-auth mutations; constant-time compares.
+- **Performance**: latency/memory budgets declared per feature; no N+1, no `SELECT *`, no offset pagination on large tables; timeouts on every external call; bounded concurrency; regression guards in CI.
+- **Code quality**: strong typing (no `any`/`interface{}`), SOLID, no god objects, cyclomatic ≤ 10, files ≤ 1000 lines, illegal states unrepresentable.
 - Commits never carry AI-attribution trailers.
 
 ## Install
@@ -84,10 +87,25 @@ go build -o claudiao ./cmd/claudiao
 
 Requires Go 1.24+.
 
-### From releases (soon)
+### From releases
 
-Pre-built binaries for Linux, macOS, and Windows will be published at
+Pre-built binaries for Linux, macOS (Intel + Apple Silicon), and Windows live at
 [Releases](https://github.com/Muriel-Gasparini/claudiao/releases).
+
+Linux / macOS one-liner (replace the version with the latest tag):
+
+```bash
+VERSION=v0.1.2
+OS=$(uname | tr '[:upper:]' '[:lower:]')                # linux | darwin → macos
+ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/')
+[ "$OS" = "darwin" ] && OS=macos
+
+curl -L -o /tmp/claudiao.tar.gz \
+  "https://github.com/Muriel-Gasparini/claudiao/releases/download/${VERSION}/claudiao_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+tar -xzf /tmp/claudiao.tar.gz -C /tmp
+sudo mv /tmp/claudiao /usr/local/bin/claudiao
+claudiao version
+```
 
 ## Usage
 
