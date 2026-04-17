@@ -1,0 +1,88 @@
+version: 2
+
+project_name: claudiao
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: claudiao
+    main: ./cmd/claudiao
+    binary: claudiao
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}macos
+      {{- else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore:'
+      - '^test:'
+      - 'Merge pull request'
+      - 'Merge branch'
+  groups:
+    - title: Features
+      regexp: '^feat(\([^)]+\))?:'
+      order: 0
+    - title: Fixes
+      regexp: '^fix(\([^)]+\))?:'
+      order: 1
+    - title: Refactors
+      regexp: '^refactor(\([^)]+\))?:'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: Muriel-Gasparini
+    name: claudiao
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
+  header: |
+    ## claudiao {{ .Version }}
+
+    TUI installer for the SDD framework for Claude Code.
+
+    See the [README](https://github.com/Muriel-Gasparini/claudiao#install)
+    for install instructions.

@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Test with coverage
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Enforce coverage floor (80%)
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "total coverage: ${total}%"
+          awk -v t="$total" 'BEGIN { if (t+0 < 80) { print "coverage below 80% floor"; exit 1 } }'
+
+  goreleaser:
+    name: Build & publish
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
