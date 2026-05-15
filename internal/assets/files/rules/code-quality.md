@@ -127,12 +127,52 @@ there when it was written. This file is a first-class quality gate.
 
 ### Comments
 
-- Default: **no comments**. Names and structure explain themselves.
-- Write a comment only when the **WHY is non-obvious**: a hidden constraint, a subtle invariant, a workaround for a specific bug, behavior that would surprise a reader.
-- Never explain the **WHAT** — the code already does that.
-- Never reference the current task, PR, or caller ("added for ticket-123", "used by X") — that rots.
-- Docstrings on **public API** (parameters, returns, errors, examples).
-- Dead code → deleted, not commented out. Git keeps history.
+**Order of preference for clarity** — try them in order, comment only after
+the previous three failed:
+
+1. **Clear code** — straight-line logic, no hidden state, no clever tricks.
+2. **Good names** — `daysUntilExpiry` beats `// d = days left`.
+3. **Small functions** — extracting a helper kills the comment.
+4. **Comment only** when 1-3 cannot carry the missing context.
+
+**Default: no comments.** A comment is a liability — it can lie, drift,
+duplicate the code, or pad noise. Most code does not need any.
+
+#### Comment when
+
+- a **weird business rule** the reader cannot infer from the code
+  (`// minors require parental consent under §227(c)`)
+- a **workaround** for a lib/API/browser bug — link the issue + affected
+  version (`// Safari 17.4 bug: input.value lost on blur — see WebKit#262471`)
+- a **decision that looks wrong but is intentional** (e.g., a non-obvious
+  choice the next reader would "fix")
+- a **trap**: someone simplifying this *will* break it
+  (`// do not switch to JSON.stringify — order matters for the signature`)
+- code touching **security, money, concurrency, cache, idempotency,
+  timezone, fragile parsing** — when the invariant is non-trivial
+
+#### Do NOT comment when
+
+- it **restates the function/variable name** (`// increments counter`)
+- it **explains basic syntax** of the language
+- it **compensates for confusing code** that should be refactored —
+  fix the code, delete the comment
+- it **will rot fast**: references to the current task, PR, ticket, caller,
+  "for now", "added in Sprint 12", "used by X" — that belongs in the
+  PR description, not the source
+- the WHY is already obvious from the function name + types + a glance at
+  the body
+
+If a comment would only repeat what a well-named identifier already says,
+**delete the comment and improve the name** (or split the function).
+
+#### Other
+
+- **Docstrings on public API** (parameters, returns, errors, examples).
+  Internal helpers usually don't need them.
+- **Dead code → deleted**, not commented out. Git keeps history.
+- **TODO / FIXME / HACK** require a linked ticket and a deadline. Otherwise
+  delete or fix now.
 
 ### Readability
 

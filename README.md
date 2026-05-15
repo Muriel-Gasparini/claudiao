@@ -1,9 +1,10 @@
 # claudiao
 
-A TUI installer that drops a **Spec Driven Development** framework into your
-[Claude Code](https://claude.com/claude-code) config. Opinionated rules,
-interviewer sub-agents, quality gates — everything needed so an LLM doesn't
-ship you a house of cards.
+A TUI installer that drops a **compact AI coding agreement** into your
+[Claude Code](https://claude.com/claude-code) config. Three habits — ask
+only when ambiguous, self-critique before declaring done, adversarial
+reviewer auto-fires on sensitive areas — turned into files Claude Code
+reads on every conversation.
 
 ![status](https://img.shields.io/badge/status-alpha-orange) ![license](https://img.shields.io/badge/license-MIT-blue) ![go](https://img.shields.io/badge/go-1.24+-00ADD8)
 
@@ -21,13 +22,15 @@ AI-assisted coding is everywhere. Most of it is awful.
   sessions; agents invent APIs and lie about it.
 - **Tests are theatre.** Generated to satisfy coverage, not to catch bugs —
   mocks returning the exact value the assertion expects.
+- **Self-approval is the default.** The model writes code, the model declares
+  it "secure", and a real reviewer later finds three vulnerabilities.
 
-The LLM is not the problem. The **absence of a process** is.
+The LLM is not the problem. The **absence of process and adversarial review** is.
 
 claudiao is the process, turned into files your Claude Code instance reads on
-every conversation: rules that forbid sloppy behavior, sub-agents that force
-interviews before implementation, quality gates that refuse to ship untested
-code.
+every conversation: rules that forbid sloppy behavior, an adversarial reviewer
+subagent that fires automatically on sensitive areas, quality gates that
+refuse to declare safety without evidence.
 
 ## What it installs
 
@@ -35,10 +38,10 @@ Everything lands in `~/.claude/`:
 
 | Module | Where | What |
 |---|---|---|
-| **Core** | `CLAUDE.md` | Global SDD flow (Discover → Design → Tasks → Implement → Review → Ship) and the rules index |
-| **Rules** | `rules/*.md` | 10 enforceable rule files — always on: `effort-tiering.md`, `concision.md`, `clarifications.md`, `quality-gates.md`, `git.md`. Load when relevant: `testing.md`, `code-quality.md`, `security.md`, `performance.md`, `ui-ux.md` |
-| **Agents** | `agents/sdd-*.md` | Sub-agents per phase: product-owner, architect, dev-lead, implementer, reviewer, release-manager |
-| **Output Styles** | `output-styles/sdd-*.md` | Personas the orchestrator wears during each phase |
+| **Core** | `CLAUDE.md` | The compact flow + rules index |
+| **Rules** | `rules/*.md` | 10 rule files. Pre-loaded every turn: `concision.md`, `clarifications.md`, `git.md`. On-demand (Read when the surface is touched): `testing.md`, `code-quality.md`, `security.md`, `performance.md`, `ui-ux.md`, `effort-tiering.md`, `quality-gates.md` |
+| **Agent** | `agents/sdd-reviewer.md` | Adversarial reviewer subagent. Posture: *"wrong until proven otherwise"*. Auto-invoked when the diff touches a sensitive area |
+| **Output Style** | `output-styles/sdd-orchestrator.md` | Orchestrator persona — compact flow, no phases, no spec files |
 
 What it **never** touches:
 
@@ -51,23 +54,23 @@ What it **never** touches:
 A full `~/.claude` backup (`~/.claude.backup-<timestamp>`) is taken **before**
 any file is written, every time.
 
-## The SDD flow
+## The flow
 
-Every feature goes through six phases. Each phase leaves a spec file under
-`specs/<feature_slug>/`. The next phase reads that spec in a fresh context —
-that is its **only** handoff.
+No phases, no numbered spec files, no Ready/Evidence ceremony.
+Conversation + diff are the memory.
 
 ```
-01-discover.md  → 02-design.md  → 03-tasks.md  → 04-implementation.md
-                                                  ↓
-                                  05-review.md  → 06-ship.md
+[Ask if ambiguous] → [Short plan] → [Implement] → [Self-critique] →
+[Auto-reviewer if sensitive] → [Resolve findings] → [Commit]
 ```
 
 Rules are strict:
 
-- **No implementation** without a filled `01-discover.md`, `02-design.md`, `03-tasks.md`.
-- Every interview agent asks via `AskUserQuestion` before writing. If the tool is missing in the runtime, the subagent emits a `[PENDING_USER_QUESTIONS]` block and **stops**; the orchestrator asks the user and re-invokes it. No silent Assumptions.
-- **Ready is evidence, not opinion.** The orchestrator runs the phase rubric adversarially, emits a `Blocker / Major / Minor` findings table, and only then declares Ready with an explicit `Evidence` block. "Looks good to me" is rejected at the gate.
+- **Ask via `AskUserQuestion`** only when there is real ambiguity — 1-3 grouped questions, no mandatory rounds. Subagents that lack the tool emit a `[PENDING_USER_QUESTIONS]` block and stop; the orchestrator brings the question to the user.
+- **Self-critique before declaring done.** List 3 ways the code could be wrong and verify each one. If you cannot list 3, you have not looked enough.
+- **Adversarial reviewer is mandatory** when the diff touches a sensitive area: auth, crypto, input validation, DB queries, public endpoints, authz, secrets, schema migrations, new dependencies, paths from user input (traversal), URLs from user input (SSRF), templates rendering user content (XSS). The orchestrator calls `sdd-reviewer` automatically — it does not ask the user whether to review. Blockers and Majors are fixed before commit.
+- **Never auto-declare "secure / safe / protected"** without concrete evidence (reviewer ran, security lint ran, antipattern grep ran). Otherwise: *"implemented; security not verified."*
+- **No numbered spec files.** `01-discover.md`, `02-design.md`, etc. are forbidden — conversation + diff carry the context.
 - **Testing**: no mocks of internal code, no tests written to pass, mutation-mental check on every function, happy-path + error + edge case required, coverage floor 80% unit.
 - **Security**: secrets never in repo/logs/URLs; parameterized queries; allow-list authz; SSRF guards; JWT `alg:none` rejected; CSRF on cookie-auth mutations; constant-time compares.
 - **Performance**: latency/memory budgets declared per feature; no N+1, no `SELECT *`, no offset pagination on large tables; timeouts on every external call; bounded concurrency; regression guards in CI.
@@ -140,8 +143,8 @@ The framework lives entirely under `internal/assets/files/`:
 
 - `CLAUDE.md` — top-level flow
 - `rules/*.md` — behavior rules
-- `agents/sdd-*.md` — sub-agent definitions
-- `output-styles/sdd-*.md` — orchestrator personas
+- `agents/sdd-reviewer.md` — adversarial reviewer subagent
+- `output-styles/sdd-orchestrator.md` — orchestrator persona
 
 Edit the markdown, rebuild (`go build ./cmd/claudiao`), and the new content
 ships with the binary (everything is embedded via `go:embed`).

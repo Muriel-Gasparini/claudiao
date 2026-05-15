@@ -1,175 +1,89 @@
-# Rules — SDD Quality Gates
+# Rules — Quality gates (compact)
 
-## Philosophy
+The model has a positive bias toward its own output. Self-approval is
+not evidence. This rule defines two independent checks: a cheap
+self-critique by the writer, and an expensive adversarial review by an
+independent subagent.
 
-"Ready" is a declaration of **evidence**, not an opinion. The person (or
-agent) saying "Ready: yes" is staking their credibility on having verified
-the criteria below — and on having done so against the actual artifact,
-not against a feeling.
+## Self-critique by the writer (cheap, always)
 
-Every optimistic Ready that later turns out false is a **gate failure**,
-and costs more than a hundred conservative "Ready: no" declarations.
+Before declaring "done" on any non-trivial change, the writer MUST:
 
-## Hard rules
+1. List **3 ways the code could be wrong** (logic error, edge case,
+   wrong assumption, missing validation, race, off-by-one, etc.).
+2. For each, **check the actual code** and report whether the failure
+   mode is present.
+3. If the code is fine, say so with the verification (e.g. *"checked
+   line X, the bound is correct because Y"*).
 
-- **The phase agent does not declare itself Ready.** It submits the spec.
-  The **orchestrator** runs the rubric and declares Ready (or delegates to
-  the reviewer/release-manager agent for later phases).
-- **Self-review is not optional.** The orchestrator runs the rubric
-  adversarially — looking for reasons it is NOT ready.
-- **Blockers and Majors are never compatible with Ready: yes.** Fix first.
-- **Minors** may ship; they are recorded in a "Deferred" section of the spec.
-- **Every Ready decision produces a written report** in the format below.
+Skipping this step is forbidden on changes > 20 lines or any change
+that touches business logic.
 
-## Never declare "Done/Ready" without:
+## Adversarial review by `sdd-reviewer` (mandatory on sensitive areas)
 
-- A spec sufficient for the phase (no `…`, `TBD`, unfilled headers, unlabeled assumptions)
-- Clear, **measurable** acceptance criteria (not "fast", not "easy to use")
-- Documented edge cases with expected behavior
-- Relevant tests passing (when the phase produces code)
-- Unit coverage >= 80% (when the phase produces code)
-- **Rubric run against the artifact**, with findings written out
-- **Zero Blockers, zero Majors**
-
-## Ready report — required format
-
-Every phase ends with either:
+When the diff touches a sensitive area (list in `~/.claude/CLAUDE.md`),
+the writer MUST call:
 
 ```
-Ready: yes
-
-Evidence
-- Phase: <discover|design|tasks|implement|review|ship>
-- Artifact: <path to spec/code>
-- Rubric: <which checklist was applied>
-- Reviewer agent invoked: <yes|no, reason>
-- Blockers: 0
-- Majors: 0
-- Minors: <n, each listed with action owner>
-- Open questions: 0 blocking
-- Coverage: <%, when code phase>
-- Evidence links: <paths to sections / CI runs / logs>
-
-Checks performed
-- <each checklist item from the rubric, marked ✓>
+Agent({
+  subagent_type: "sdd-reviewer",
+  description: "Adversarial review",
+  prompt: "Diff: <paths/summary>. Sensitive areas touched: <auth/crypto/...>.
+           Posture: 'wrong until proven otherwise'. Find failures.
+           Use Grep/Read on the changed files. If nothing found after a
+           systematic pass, report 'no obvious failures'."
+})
 ```
 
-Or:
+The writer **does not ask the user** whether to review. The review runs.
+
+## Reviewer output format
+
+For each finding:
 
 ```
-Ready: no
+### [Severity: blocker|major|minor] <short title>
 
-Reason
-- Blockers: <n, listed with path to offending section>
-- Majors: <n, listed with path>
-- Missing rubric items: <listed>
-- Required fixes before retry: <bulleted>
+**Where**: <file:line>
+**Problem**: <what is wrong, concrete>
+**Impact**: <why it matters; possible exploit/failure>
+**Fix**: <patch or direction>
+**Validation**: <how to confirm the fix works>
 ```
 
-An unformatted "Ready: yes" or "looks good" is rejected at review time.
+Final table, even when empty:
+
+```
+| Severity | Count | Items |
+|----------|-------|-------|
+| Blocker  | 0     | —     |
+| Major    | 0     | —     |
+| Minor    | 0     | —     |
+```
 
 ## Severity definitions
 
-- **Blocker** — factually wrong, security/privacy risk, broken contract,
-  missing acceptance criterion, unstated assumption that changes behavior.
-  Must fix before Ready.
-- **Major** — ambiguity that a reasonable implementer would resolve wrongly;
-  edge case without stated behavior; missing NFR number; untested critical
-  path. Must fix before Ready.
-- **Minor** — wording, ordering, formatting, nit. May ship; record in a
-  "Deferred" section with an owner.
+- **Blocker** — exploitable vulnerability, broken contract, data loss,
+  authz bypass, wrong data persisted. Fix before commit.
+- **Major** — edge case that will explode in production, NFR not met,
+  weak/fake test. Fix before commit.
+- **Minor** — naming, formatting, prose nit. May ship; record as a TODO
+  with link/issue if not fixed now.
 
-When in doubt, rank upward. False negatives are worse than false positives.
+When in doubt, rank up. False positives cost less than missed bugs.
 
-## "Ready" per phase — rubric
+## Resolution
 
-### Discover — `01-discover.md`
+- Blocker + Major: fix before commit, then re-run the reviewer if the
+  fix touched non-trivial logic.
+- Minor: fix now, or open an issue and reference it in the commit body.
 
-- [ ] Vision and goals clear enough for an outsider to explain
-- [ ] Non-goals explicit with reason
-- [ ] User personas defined with a real use case each
-- [ ] MVP defined, minimal, with acceptance criteria (measurable)
-- [ ] At least 2-3 concrete scenarios with realistic data
-- [ ] Edge cases listed with **expected behavior** (not just a name)
-- [ ] Constraints and risks recorded
-- [ ] Open questions: 0 blocking (non-blocking moved to a section)
-- [ ] Assumptions tagged `⚠️ unvalidated` if any
-- [ ] Handoff section filled for the Architect
+## Anti-patterns — rejected
 
-### Design — `02-design.md`
-
-- [ ] Inherited context from Discover present and correct
-- [ ] Every decision has alternatives documented with pros/cons
-- [ ] Contracts (API / events) with request + response + error JSON examples
-- [ ] Data model / schema with types, indexes, constraints, and reasoning
-- [ ] NFRs with concrete numbers (latency p95/p99, volume, error budget)
-- [ ] Error flow documented, not only happy path
-- [ ] Rollout / migration plan with rollback
-- [ ] Security considerations (cross-ref `rules/security.md`)
-- [ ] Performance considerations (cross-ref `rules/performance.md`)
-- [ ] **If the feature has a UI**: handoff checklist from `rules/ui-ux.md § Design handoff` fully ticked (wireframes for every state, state machine, responsive plan, tokens, a11y plan, motion plan, exact copy, i18n, edge-case data, analytics, perf budget)
-- [ ] Handoff section filled for the Dev Lead
-
-### Tasks — `03-tasks.md`
-
-- [ ] Inherited context from Discover + Design present
-- [ ] Tasks small (≤ ~4h each) and independently verifiable
-- [ ] Each task: description, dependencies, acceptance, edge cases, tests, notes
-- [ ] Execution order explicit and justified
-- [ ] Definition of Done defined for the feature
-- [ ] No task says "as needed" or "etc." — all concrete
-- [ ] Handoff section filled for the Implementer
-
-### Implement — `04-implementation.md`
-
-- [ ] All tasks from `03-tasks.md` done or explicitly deferred
-- [ ] Tests passing: command + result recorded
-- [ ] Coverage ≥ 80%: number recorded
-- [ ] Integrity checklist from `rules/testing.md` ticked
-- [ ] Any divergence from spec recorded with reason
-- [ ] Commands, decisions, and outputs logged in the implementation diary
-- [ ] No commented-out code, no `TODO` without a ticket, no dead code
-- [ ] Handoff section filled for the Reviewer
-
-### Review — `05-review.md`
-
-- [ ] All specs read before reviewing
-- [ ] Findings classified must-fix / should-fix / nit
-- [ ] Each finding: what is wrong, why it matters, how to fix, spec reference
-- [ ] Security rubric from `rules/security.md` run against the diff
-- [ ] Performance rubric from `rules/performance.md` run where applicable
-- [ ] Testing integrity checklist from `rules/testing.md` verified
-- [ ] Code quality checklist from `rules/code-quality.md` verified
-- [ ] **If the PR touches UI**: frontend rubric from `rules/ui-ux.md § Review rubric` verified
-- [ ] No must-fix items outstanding before Ready
-
-### Ship — `06-ship.md`
-
-- [ ] Review report has no outstanding must-fix items
-- [ ] Tests passing with coverage ≥ 80% on target branch
-- [ ] Feature flag configured (if applicable)
-- [ ] Rollout plan defined
-- [ ] Rollback plan documented and rehearsed mentally
-- [ ] Observability (metrics, logs, alerts) in place
-- [ ] Release notes written
-- [ ] On-call informed
-
-## Anti-patterns — rejected at gate
-
-- "Ready: sim" without the Evidence block.
-- "I think we're good" / "should be fine" as a Ready signal.
-- Moving open questions into "Assumptions" to clear the checklist.
-- Marking Minor what is actually a Major ("downgrading to ship faster").
-- Declaring Ready on a self-written spec without running the rubric.
-- Skipping the rubric because "it's a small change".
-- "Tests pass locally" — evidence is CI runs, not claims.
-- Coverage numbers reported without the tool/command that produced them.
-
-## When the user says "review"
-
-If the user asks you to review after you already declared Ready and you
-find issues: **the prior Ready was a defect**. Acknowledge it, fix the
-process, not just the spec.
-
-"I should have caught this before declaring Ready. Running the rubric
-properly this time" is the right response. Not "good catch".
+- Writer self-reviewing and declaring "secure" without invoking
+  `sdd-reviewer` on sensitive areas.
+- Skipping the reviewer because "this is a small change" — small
+  changes in sensitive areas are exactly where bugs slip through.
+- Downgrading a Major to Minor to ship faster.
+- Hiding findings in prose instead of the severity table.
+- Findings without `Where:` (file:line).

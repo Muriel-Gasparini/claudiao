@@ -1,69 +1,40 @@
-# Rules — Match effort to feature size
+# Rules — Effort tiering (compact)
 
-Not every feature needs the full SDD. The process exists to lower downside
-on risky/complex work. Running the full ceremony on a trivial change wastes
-tokens, time, and attention — and makes the model look smart while shipping
-bad code because it spent its budget satisfying checklists.
+No nominal tiers. Three binary questions per change. Answer them, then
+act.
 
-## Tiers
+## 1. Does the diff touch a sensitive area?
 
-### Trivial
-- Change: < 20 lines, single file, no public API, no UI, no data change.
-- Examples: typo, rename private var, tighten a regex, fix a log message, tweak a constant.
-- Process: **just do it**. No spec, no interview. Single Conventional Commit. Tests only if the area was already tested.
+The list lives in `~/.claude/CLAUDE.md` (auth, crypto, input validation,
+DB queries, public endpoints, authz, secrets, schema, new deps,
+path/SSRF/XSS).
 
-### Small
-- Change: < 200 lines, 1-3 files, no schema change, no new external surface.
-- Examples: add a field to an existing endpoint, fix a bug with a regression test, small UI tweak inside an existing component.
-- Process: one-page `spec.md` with intent + test plan. Skip Discover/Design phases. Implement. Test. Ship.
+- **Yes** → adversarial reviewer (`sdd-reviewer`) is mandatory.
+- **No** → reviewer is optional. Use it when the change exceeds ~50
+  lines or touches a critical code path.
 
-### Medium
-- Change: a feature added or changed meaningfully. Multi-file, possibly touches contracts or UI composition.
-- Process: collapsed SDD — merge Discover + Design into a single `01-02.md` (1-2 pages). Tasks + Implement + Review + Ship as usual.
+## 2. Does the change span > 1 file or > ~50 lines?
 
-### Large
-- Change: new feature with multiple surfaces, schema changes, or new external contracts. Cross-team impact likely.
-- Process: full SDD as defined in `CLAUDE.md`.
+- **Yes** → write a short plan in the conversation (`TodoWrite` or
+  Plan tool) before implementing.
+- **No** → go directly.
 
-## Heuristic
+## 3. Is there real ambiguity in the request?
 
-- If the interview keeps returning "obvious from context" answers, the tier is too heavy. **Move down a tier.**
-- If the implementation keeps hitting scope the spec didn't anticipate, the tier is too light. **Move up a tier.**
-- When in doubt between two tiers, pick the **lower** one; escalate when you hit a real unknown.
+- **Yes** → `AskUserQuestion` with 1-3 grouped questions in a single
+  call.
+- **No** → 0 questions.
 
-## Which rules apply per tier
+## Heuristic for surprise scope
 
-| Rule                  | Trivial | Small | Medium | Large |
-|-----------------------|:-------:|:-----:|:------:|:-----:|
-| `concision.md`        | ✓       | ✓     | ✓      | ✓     |
-| `git.md`              | ✓       | ✓     | ✓      | ✓     |
-| `clarifications.md`   | on ambiguity | ✓ | ✓ | ✓ |
-| `quality-gates.md`    | —       | light | full   | full  |
-| `testing.md`          | —       | happy + edge | full | full |
-| `security.md`         | only if touching auth / input / secrets | same | full | full |
-| `performance.md`      | only if touching hot path | same | full | full |
-| `code-quality.md`     | smells + typing | full | full | full |
-| `ui-ux.md`            | only if UI | full | full | full |
-
-"—" = the rule does not trigger. "only if …" = load it only when the
-change actually touches that surface.
-
-## Orchestrator responsibility
-
-Before starting a feature, classify the tier in **one sentence** and state
-the process that follows. Examples:
-
-- "Tier: Trivial — rename private helper. Going straight to commit."
-- "Tier: Small — add `emailVerified` boolean to existing `User`. Single spec page, one test."
-- "Tier: Medium — introduce webhook signing. Merging Discover+Design, tasks next."
-- "Tier: Large — rebuild the billing pipeline. Full SDD."
-
-The user can override the tier.
+If during implementation you discover scope the request did not
+anticipate (new files, new endpoint, new dep): **stop**. Report to the
+user. Ask whether to expand or open a follow-up. Do not silently grow
+the change.
 
 ## Forbidden
 
-- Running the full interview (3–4 rounds) on a Trivial or Small change.
-- Loading `security.md` / `performance.md` / `code-quality.md` / `ui-ux.md`
-  when the change does not touch those surfaces.
-- Writing a 10-page Design spec for a 2-file change.
-- Skipping a tier down to ship faster on something that actually is Medium.
+- Creating numbered spec files (`01-discover.md`, …, `06-ship.md`).
+- Skipping the reviewer when a sensitive area was touched.
+- Asking 2+ rounds of questions when the request is clear.
+- Expanding scope silently.

@@ -1,130 +1,109 @@
-# Project — Spec Driven Development (SDD)
+# Working agreement (compact)
 
-## Required flow
+ALWAYS READ @~/.claude/RTK.md
 
-This project uses **Spec Driven Development**. Every feature goes through:
+This file replaces the old phase-based SDD. There are no spec files, no
+six-phase workflow, no Ready/Evidence ceremony. The system is built around
+three habits: **ask only when ambiguous**, **review adversarially when it
+matters**, **never auto-declare safety without evidence**.
 
-**Discover → Design → Task → Implement → Review → Ship**
+## Default flow
 
-Specs live under `specs/<feature_slug>/` with numbered files (00 to 06).
+1. **Ask only if there is real ambiguity.** If the request is clear, go.
+   When you ask, use `AskUserQuestion` (1-3 grouped questions in a single
+   call). No mandatory rounds.
+2. **Short plan in the conversation** (`TodoWrite` or Plan tool) before
+   touching more than one file or more than ~50 lines.
+3. **Implement.**
+4. **Self-critique before declaring done.** List 3 ways the code could be
+   wrong and verify each one. If you cannot list 3, you have not looked
+   enough.
+5. **Adversarial reviewer is mandatory** when the diff touches a sensitive
+   area (list below). You call `Agent({ subagent_type: "sdd-reviewer", … })`
+   yourself — do not ask the user whether to review. Resolve every Blocker
+   and Major before commit.
+6. Commit with a Conventional Commit message. No AI trailers (see
+   `rules/git.md`).
 
-## Match effort to size — read this FIRST
+## Sensitive areas — auto-trigger the reviewer
 
-Not every change is a feature. Before anything else, classify the tier
-(Trivial / Small / Medium / Large) per `rules/effort-tiering.md` and
-follow the lightweight flow for smaller tiers.
+- Authentication, sessions, cookies, JWT
+- Cryptography, hashing, RNG, secret comparison
+- Input validation, sanitization, parsers of untrusted bytes
+- Database queries (SQL/NoSQL); filters built from user input
+- Public endpoints (HTTP, RPC, WebSocket)
+- Authorization / permissions / multi-tenant isolation
+- Secrets, environment variables, `.env` files
+- Schema migrations
+- Adding or upgrading external dependencies
+- File paths built from user input (path traversal)
+- Fetching URLs supplied by the user (SSRF)
+- Templates rendering user content (XSS, SSTI)
 
-Full ceremony (Discover → Design → Tasks → …) only applies to **Medium**
-and **Large**. Trivial goes straight to commit. Small collapses into a
-one-page spec.
+If the diff touches any of these, the reviewer runs. Period.
 
-## Core rule (Medium+)
+## Comments policy (code)
 
-Do NOT write code without filled-out specs:
+Default: **no comments**. The order of preference for clarity is:
 
-1. `01-discover.md` with MVP, acceptance criteria, and edge cases
-2. `02-design.md` with architecture, contracts, and NFRs
-3. `03-tasks.md` with small, verifiable tasks
+1. clear code → 2. good names → 3. small functions → 4. comment **only**
+where context is missing.
 
-If the user asks for direct implementation on a Medium+ change, complete
-the earlier phases first. Trivial/Small have their own lighter gates.
+**Comment when** the reader genuinely cannot infer the *why*:
 
-## Specs are memory
+- a weird business rule the code alone does not explain
+- a workaround for a lib/API/browser bug (link the issue + affected version)
+- a decision that looks wrong but is intentional
+- a "trap" someone would simplify and silently break
+- code touching security, money, concurrency, cache, idempotency, timezone,
+  or fragile parsing
 
-Each spec is the **handoff document** for the next agent. Every phase runs in
-isolated context — the previous spec is the ONLY bridge. Therefore:
+**Do not comment** when:
 
-- Specs must be **complete and self-contained** (the reader never needs to ask more)
-- Record **decisions AND the reasoning** behind them
-- Record **alternatives discarded** and why
-- Use **concrete examples** with realistic data
-- Never leave "…" in a finished spec
-- End every spec with a **Handoff** summarizing what the next phase needs
+- it just restates the function/variable name (`// increments counter`)
+- it explains basic language syntax
+- it compensates for confusing code that should be **refactored** instead
+- it rots fast: references to current task/PR/caller, "for now", "added in
+  Sprint 12", "used by X" — that belongs in the PR description, not the code
 
-## Agents ask — via AskUserQuestion
+If a comment would only repeat what a well-named identifier already says,
+**delete it and improve the name instead.**
 
-Before writing any spec, the agent INTERVIEWS the user in rounds — **scaled
-to the tier**:
+## Hard prohibitions
 
-- **Trivial / Small**: 0-1 round. Ask only if something is genuinely unknown.
-- **Medium / Large**: 2-4 rounds (domain / scope / edge cases / confirmation).
+- Never claim "secure / safe / protected / hardened" without concrete
+  evidence (reviewer ran, security linter ran, or a documented
+  antipattern grep ran). Otherwise say: *"implemented; security not
+  verified"*.
+- Never create numbered spec files (`01-discover.md`, `02-design.md`,
+  `03-tasks.md`, `04-implementation.md`, `05-review.md`, `06-ship.md`).
+  Conversation + diff are the memory.
+- Never use `Co-Authored-By:` or other AI attribution trailers.
+- Never declare "done" while a `[PENDING_USER_QUESTIONS]` block from a
+  subagent is unanswered — surface it to the user first.
 
-Stop asking when the answers become "obvious from context" — that is the
-signal the tier is too heavy, not that you must push through.
+## Built-in tools used here
 
-### Interaction rule: ALWAYS use AskUserQuestion
+- `AskUserQuestion` for clarification (1-4 questions, 2-4 options, no "Other").
+- `TodoWrite` to show the short plan and progress.
+- `Grep` for code search (never `grep`/`rg` via Bash).
+- `Agent` (subagent_type: `sdd-reviewer`) for the mandatory adversarial review.
 
-**EVERY** question to the user MUST use the `AskUserQuestion` tool.
-**NEVER** ask as plain text, numbered lists, or bullets.
+## Rules — pre-loaded
 
-API constraints:
-- 1-4 questions per call (maxItems: 4)
-- 2-4 options per question (minItems: 2, maxItems: 4)
-- **Do NOT include an "Other" option** — the system adds one automatically
-- `header` is required, max 12 chars
-- `description` is required on every option
-- `multiSelect` is required (boolean)
-
-If `AskUserQuestion` is not present in the runtime, emit
-`[PENDING_USER_QUESTIONS]` (see `rules/clarifications.md`) and stop.
-
-## Built-in Claude Code tools
-
-Beyond AskUserQuestion, use these native tools throughout SDD:
-
-- **TodoWrite**: visible task progress during implementation
-- **Grep**: code search — NEVER run `grep`/`rg` via Bash, use the native tool
-- **Task**: launch sub-agents (Explore / general-purpose) for deeper codebase analysis
-
-## Act, don't analyze forever
-
-Reading without producing output is not progress. Limits:
-
-- **Every Grep/Read/Task(Explore) call must produce a written takeaway** in the next response. If you cannot state what you learned, the call was wasted.
-- **More than 3 Read/Grep calls in a row without a code change, spec paragraph, or user question** → stop and report "stuck on X, need Y".
-- **If the same question bounces back and forth in your head for 2+ tool calls without a concrete next step** → surface it to the user.
-
-Analysis paralysis costs the user tokens, time, and trust. Default to the
-smallest concrete next step, then iterate.
-
-## Transitions are explicit
-
-The user decides when to move forward. No agent auto-advances to the next phase.
-At the end of each phase the agent:
-
-- Declares **Ready: yes/no** with a reason (see `rules/quality-gates.md` for the evidence contract)
-- Summarizes **what was decided** and **what remains open**
-- Suggests the next command, but **asks** whether the user wants to advance
-
-## Commands
-
-- `/sdd-new <description>` — start a feature (creates specs + suggests discover)
-- `/sdd <feature_slug>` — dashboard of state + next step
-- `/sdd-discover <slug>` — Discover (fork, deep interview)
-- `/sdd-design <slug>` — Design (fork, technical decisions)
-- `/sdd-task <slug>` — Tasks (fork, decomposition)
-- `/sdd-implement <slug>` — Implement (fork, execution)
-- `/sdd-review <slug>` — Review (fork, analysis)
-- `/sdd-ship <slug>` — Ship (fork, release)
-
-## Rules — always loaded
-
-@.claude/rules/effort-tiering.md
 @.claude/rules/concision.md
 @.claude/rules/clarifications.md
-@.claude/rules/quality-gates.md
 @.claude/rules/git.md
 
-## Rules — load when the surface is touched
+## Rules — load on demand (Read when the surface is touched)
 
-Do NOT pre-load these. They contain significant context and should only
-be Read when a change actually touches the area.
+DO NOT prefix these with `@`. The `@` prefix auto-loads the file. Use
+`Read` on the path below at the start of the work that touches the area.
 
-- `@.claude/rules/testing.md` — writing or changing tests; always for Medium+
-- `@.claude/rules/code-quality.md` — non-trivial code changes; always for Medium+
-- `@.claude/rules/security.md` — auth, secrets, input validation, external calls, data access, crypto, sessions
-- `@.claude/rules/performance.md` — hot paths, DB queries, caching, frontend perf budgets, background jobs
-- `@.claude/rules/ui-ux.md` — any user-visible surface (web, mobile, CLI UX)
-
-When you decide a rule applies, `Read` the file at the start of the phase
-it applies to — not at the end.
+- rules/testing.md — writing or changing tests
+- rules/code-quality.md — non-trivial code changes
+- rules/security.md — required reading before invoking the reviewer
+- rules/performance.md — hot paths, queries, caching, frontend perf
+- rules/ui-ux.md — any user-visible surface (web, mobile, CLI UX)
+- rules/effort-tiering.md — when the size of the change is unclear
+- rules/quality-gates.md — reviewer protocol and finding format
