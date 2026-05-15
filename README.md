@@ -98,7 +98,7 @@ Pre-built binaries for Linux, macOS (Intel + Apple Silicon), and Windows live at
 Linux / macOS one-liner (replace the version with the latest tag):
 
 ```bash
-VERSION=v0.1.2
+VERSION=v0.2.0
 OS=$(uname | tr '[:upper:]' '[:lower:]')                # linux | darwin → macos
 ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/')
 [ "$OS" = "darwin" ] && OS=macos
