@@ -67,10 +67,10 @@ type installResult struct {
 
 func defaultModules() []Module {
 	return []Module{
-		{ID: "core", Name: "Core", Desc: "CLAUDE.md — global SDD flow and rules index", Count: 1, Enabled: true},
+		{ID: "core", Name: "Core", Desc: "CLAUDE.md — compact three-habit agreement and rules index", Count: 1, Enabled: true},
 		{ID: "rules", Name: "Rules", Desc: "Global behavior rules (effort-tiering, testing, security, performance, code-quality, ui-ux, git, concision, etc)", Count: 10, Enabled: true},
-		{ID: "agents", Name: "Agents", Desc: "SDD sub-agent definitions (PO, architect, dev lead, …)", Count: 6, Enabled: true},
-		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator and per-phase personas", Count: 7, Enabled: true},
+		{ID: "agents", Name: "Agents", Desc: "Adversarial reviewer subagent (sdd-reviewer)", Count: 1, Enabled: true},
+		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator persona — compact flow, no phases", Count: 1, Enabled: true},
 	}
 }
 
