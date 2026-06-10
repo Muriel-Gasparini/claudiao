@@ -102,6 +102,18 @@ The rules behind it are strict and opinionated: ask via `AskUserQuestion` only o
 
 ## Install
 
+### One-liner (install & update, no Go required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Muriel-Gasparini/claudiao/main/install.sh | sh
+```
+
+Detects your OS/arch, downloads the latest release, **verifies the sha256
+checksum**, and installs atomically to `~/.local/bin` (override with
+`CLAUDIAO_INSTALL_DIR`; pin a version with `CLAUDIAO_VERSION=v0.3.0`).
+Updating is the same command — then re-run `claudiao` to refresh the
+`~/.claude` modules; unchanged files are skipped, changed ones previewed.
+
 ### From source
 
 ```bash
