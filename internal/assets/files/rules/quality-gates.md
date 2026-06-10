@@ -28,14 +28,20 @@ the writer MUST call:
 Agent({
   subagent_type: "sdd-reviewer",
   description: "Adversarial review",
-  prompt: "Diff: <paths/summary>. Sensitive areas touched: <auth/crypto/...>.
+  prompt: "Changed files: <path (+adds/-dels), one per line — from git diff HEAD --stat>.
+           Sensitive areas touched: <auth/crypto/...>.
+           Acceptance criteria: <user-stated, if any>.
            Posture: 'wrong until proven otherwise'. Find failures.
-           Use Grep/Read on the changed files. If nothing found after a
-           systematic pass, report 'no obvious failures'."
+           If nothing found after a systematic pass, report 'no obvious failures'."
 })
 ```
 
 The writer **does not ask the user** whether to review. The review runs.
+
+Prompt economy: pass the scope (file list + areas + criteria), **not**
+the full diff — the reviewer scopes hunks itself via `git diff`. Pasting
+the diff into the prompt duplicates what git already holds and doubles
+the token cost of the review.
 
 ## Reviewer output format
 
@@ -70,7 +76,9 @@ Final table, even when empty:
 - **Minor** — naming, formatting, prose nit. May ship; record as a TODO
   with link/issue if not fixed now.
 
-When in doubt, rank up. False positives cost less than missed bugs.
+When in doubt between Major and Minor, rank up — false positives cost
+less than missed bugs. Between Blocker and Major, demand the concrete
+exploit/failure sketch: no sketch, it is a Major.
 
 ## Resolution
 

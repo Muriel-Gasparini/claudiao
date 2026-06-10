@@ -3,6 +3,7 @@ package assets
 import (
 	"errors"
 	"io/fs"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -58,6 +59,21 @@ func TestFSClaudeMdHasContent(t *testing.T) {
 	}
 	if len(data) < 100 {
 		t.Errorf("CLAUDE.md suspiciously small: %d bytes", len(data))
+	}
+}
+
+func TestReviewerAgentKeepsReceiptContract(t *testing.T) {
+	data, err := fs.ReadFile(FS(), "agents/sdd-reviewer.md")
+	if err != nil {
+		t.Fatalf("ReadFile agents/sdd-reviewer.md: %v", err)
+	}
+	content := string(data)
+	wantReceipt := `claudiao receipt create --reviewer sdd-reviewer --summary "blocker:N major:N minor:N"`
+	if !strings.Contains(content, wantReceipt) {
+		t.Errorf("sdd-reviewer.md lost the receipt command the commit gate depends on: %q", wantReceipt)
+	}
+	if strings.Contains(content, "git diff --stat") || strings.Contains(content, "git diff -U20 -- ") {
+		t.Error("sdd-reviewer.md uses bare git diff; must diff against HEAD or staged changes are invisible to the review")
 	}
 }
 

@@ -20,8 +20,9 @@ matters**, **never auto-declare safety without evidence**.
    enough.
 5. **Adversarial reviewer is mandatory** when the diff touches a sensitive
    area (list below). You call `Agent({ subagent_type: "sdd-reviewer", … })`
-   yourself — do not ask the user whether to review. Resolve every Blocker
-   and Major before commit.
+   yourself — do not ask the user whether to review. Pass the scope in the
+   prompt (changed-file list + sensitive areas + acceptance criteria), not
+   the full diff. Resolve every Blocker and Major before commit.
 6. Commit with a Conventional Commit message. No AI trailers (see
    `rules/git.md`).
 

@@ -178,8 +178,8 @@ func preBash(in Input, stderr io.Writer) int {
 		_ = stats.Log("commit.blocked.receipt", in.SessionID, repoDir,
 			map[string]string{"areas": sensitive.Join(areas), "cause": "missing"})
 		fmt.Fprintf(stderr, "[claudiao] Commit blocked: this diff touches sensitive areas (%s) and no review receipt exists.\n"+
-			"Run the adversarial reviewer first: Agent(subagent_type: \"sdd-reviewer\"), resolve Blockers/Majors,\n"+
-			"then record the receipt: claudiao receipt create --reviewer sdd-reviewer\n"+
+			"Run the adversarial reviewer first: Agent(subagent_type: \"sdd-reviewer\") — it records the receipt itself\n"+
+			"after a clean pass. Resolve Blockers/Majors, then verify with: claudiao receipt verify\n"+
 			"(Manual override, only with explicit user approval: prefix the commit with CLAUDIAO_SKIP=1.)\n",
 			sensitive.Join(areas))
 		return 2
@@ -187,7 +187,7 @@ func preBash(in Input, stderr io.Writer) int {
 		_ = stats.Log("commit.blocked.receipt", in.SessionID, repoDir,
 			map[string]string{"areas": sensitive.Join(areas), "cause": "stale"})
 		fmt.Fprintln(stderr, "[claudiao] Commit blocked: the working tree changed after the last review — the receipt is stale.\n"+
-			"Re-run sdd-reviewer on the current diff and create a fresh receipt: claudiao receipt create --reviewer sdd-reviewer")
+			"Re-run sdd-reviewer on the current diff; it records a fresh receipt after a clean pass.")
 		return 2
 	default:
 		// Sensitive areas were already confirmed; a receipt-verification

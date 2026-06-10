@@ -39,14 +39,20 @@ validation, DB queries, public endpoints, authz, secrets, schema, new deps,
 path/SSRF, templates). If it does:
 
 1. Invoke the reviewer yourself — do not ask the user:
-   `Agent(subagent_type: "sdd-reviewer", …)` with the diff and the sensitive
-   areas touched.
+   `Agent(subagent_type: "sdd-reviewer", …)` passing the scope, not the
+   full diff: changed-file list from `git diff HEAD --stat` + sensitive
+   areas touched + acceptance criteria (the reviewer scopes hunks itself
+   via git).
 2. Resolve every Blocker and Major. Re-run the reviewer if a fix touched
-   non-trivial logic.
-3. Record the receipt so the commit gate will pass:
+   non-trivial logic — the reviewer records a fresh receipt after a clean
+   pass.
+3. Confirm the receipt is valid for the current tree (the reviewer is the
+   one who creates it; any edit after the review stales it):
    ```
-   claudiao receipt create --reviewer sdd-reviewer --summary "blocker:0 major:0 minor:N"
+   claudiao receipt verify
    ```
+   If it is missing or stale, the review did not cover this tree —
+   re-review; do not hand-mint a receipt.
 
 The commit gate (if the Hooks module is installed) **blocks** a sensitive
 commit without a valid receipt — so this step is mandatory, not optional,
