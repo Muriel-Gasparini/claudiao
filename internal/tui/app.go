@@ -60,17 +60,30 @@ type Model struct {
 }
 
 type installResult struct {
-	err        error
-	backupPath string
-	written    int
+	err         error
+	backupPath  string
+	written     int
+	hooksMerged bool
+	bin         installer.BinResult
+}
+
+func (m Model) hooksSelected() bool {
+	for _, mod := range m.modules {
+		if mod.ID == "hooks" && mod.Enabled {
+			return true
+		}
+	}
+	return false
 }
 
 func defaultModules() []Module {
 	return []Module{
 		{ID: "core", Name: "Core", Desc: "CLAUDE.md — compact three-habit agreement and rules index", Count: 1, Enabled: true},
 		{ID: "rules", Name: "Rules", Desc: "Global behavior rules (effort-tiering, testing, security, performance, code-quality, ui-ux, git, concision, etc)", Count: 10, Enabled: true},
-		{ID: "agents", Name: "Agents", Desc: "Adversarial reviewer subagent (sdd-reviewer)", Count: 1, Enabled: true},
+		{ID: "agents", Name: "Agents", Desc: "Adversarial reviewer (sdd-reviewer) + test-fortifier (kills surviving mutants)", Count: 2, Enabled: true},
 		{ID: "output-styles", Name: "Output Styles", Desc: "Orchestrator persona — compact flow, no phases", Count: 1, Enabled: true},
+		{ID: "skills", Name: "Skills", Desc: "/ship — runs the full agreement ritual (check, review+receipt, mutate, commit)", Count: 1, Enabled: true},
+		{ID: "hooks", Name: "Hooks", Desc: "Enforcement runtime — commit gate (checks/receipts/trailers), effort-tiering, claim checker, immune nudge", Count: 4, Enabled: true},
 	}
 }
 

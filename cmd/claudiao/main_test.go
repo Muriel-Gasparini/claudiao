@@ -3,34 +3,39 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestHandleFlagVersion(t *testing.T) {
+func TestAppVersion(t *testing.T) {
 	version = "1.2.3"
 	commit = "abc"
 	date = "2026-01-01"
 	for _, arg := range []string{"-v", "--version", "version"} {
-		buf := &bytes.Buffer{}
-		if !handleFlag([]string{"claudiao", arg}, buf) {
-			t.Errorf("%q should be handled", arg)
+		stdout := &bytes.Buffer{}
+		code := app([]string{"claudiao", arg}, &bytes.Buffer{}, stdout, &bytes.Buffer{})
+		if code != 0 {
+			t.Errorf("%q: expected exit 0, got %d", arg, code)
 		}
-		out := buf.String()
+		out := stdout.String()
 		if !strings.Contains(out, "1.2.3") || !strings.Contains(out, "abc") || !strings.Contains(out, "2026-01-01") {
 			t.Errorf("%q output missing version info: %q", arg, out)
 		}
 	}
 }
 
-func TestHandleFlagHelp(t *testing.T) {
+func TestAppHelp(t *testing.T) {
 	for _, arg := range []string{"-h", "--help", "help"} {
-		buf := &bytes.Buffer{}
-		if !handleFlag([]string{"claudiao", arg}, buf) {
-			t.Errorf("%q should be handled", arg)
+		stdout := &bytes.Buffer{}
+		code := app([]string{"claudiao", arg}, &bytes.Buffer{}, stdout, &bytes.Buffer{})
+		if code != 0 {
+			t.Errorf("%q: expected exit 0, got %d", arg, code)
 		}
-		out := buf.String()
-		for _, want := range []string{"Usage", "claudiao version", "CLAUDIAO_ASSETS_DIR"} {
+		out := stdout.String()
+		for _, want := range []string{"Usage", "claudiao hook", "claudiao receipt", "claudiao mutate", "CLAUDIAO_ENFORCE"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("%q help missing %q", arg, want)
 			}
@@ -38,39 +43,38 @@ func TestHandleFlagHelp(t *testing.T) {
 	}
 }
 
-func TestHandleFlagNoArgs(t *testing.T) {
-	buf := &bytes.Buffer{}
-	if handleFlag([]string{"claudiao"}, buf) {
-		t.Error("no args should not be handled as flag")
+func TestAppHookRequiresEvent(t *testing.T) {
+	stderr := &bytes.Buffer{}
+	code := app([]string{"claudiao", "hook"}, &bytes.Buffer{}, &bytes.Buffer{}, stderr)
+	if code != 1 {
+		t.Errorf("expected exit 1, got %d", code)
 	}
-	if buf.Len() != 0 {
-		t.Errorf("expected no output, got %q", buf.String())
-	}
-}
-
-func TestHandleFlagUnknownArg(t *testing.T) {
-	buf := &bytes.Buffer{}
-	if handleFlag([]string{"claudiao", "banana"}, buf) {
-		t.Error("unknown args should not be handled")
+	if !strings.Contains(stderr.String(), "usage") {
+		t.Errorf("expected usage message, got %q", stderr.String())
 	}
 }
 
-func TestAppHandlesFlagWithoutRunningTUI(t *testing.T) {
+func TestAppHookUnknownEventIsHarmless(t *testing.T) {
+	code := app([]string{"claudiao", "hook", "banana"},
+		strings.NewReader("{}"), &bytes.Buffer{}, &bytes.Buffer{})
+	if code != 0 {
+		t.Errorf("unknown hook event must not block the session, got exit %d", code)
+	}
+}
+
+func TestAppHandlesSubcommandWithoutRunningTUI(t *testing.T) {
 	called := false
 	orig := runTUI
 	runTUI = func() error { called = true; return nil }
 	defer func() { runTUI = orig }()
 
 	stdout := &bytes.Buffer{}
-	code := app([]string{"claudiao", "version"}, stdout, &bytes.Buffer{})
+	code := app([]string{"claudiao", "version"}, &bytes.Buffer{}, stdout, &bytes.Buffer{})
 	if code != 0 {
 		t.Errorf("expected exit 0, got %d", code)
 	}
 	if called {
-		t.Error("TUI should not run when a flag is handled")
-	}
-	if !strings.Contains(stdout.String(), "claudiao") {
-		t.Errorf("expected version output, got %q", stdout.String())
+		t.Error("TUI should not run when a subcommand is handled")
 	}
 }
 
@@ -79,7 +83,7 @@ func TestAppRunsTUISuccessfully(t *testing.T) {
 	runTUI = func() error { return nil }
 	defer func() { runTUI = orig }()
 
-	code := app([]string{"claudiao"}, &bytes.Buffer{}, &bytes.Buffer{})
+	code := app([]string{"claudiao"}, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
 	if code != 0 {
 		t.Errorf("expected exit 0 on successful TUI run, got %d", code)
 	}
@@ -91,11 +95,59 @@ func TestAppReturnsOneOnTUIError(t *testing.T) {
 	defer func() { runTUI = orig }()
 
 	stderr := &bytes.Buffer{}
-	code := app([]string{"claudiao"}, &bytes.Buffer{}, stderr)
+	code := app([]string{"claudiao"}, &bytes.Buffer{}, &bytes.Buffer{}, stderr)
 	if code != 1 {
 		t.Errorf("expected exit 1 on TUI error, got %d", code)
 	}
 	if !strings.Contains(stderr.String(), "boom") {
 		t.Errorf("expected error in stderr, got %q", stderr.String())
+	}
+}
+
+func TestGitDiffHeadEmptyTreeFallback(t *testing.T) {
+	dir := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "-q"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %s", args, out)
+		}
+	}
+	// Staged file, no commit yet → no HEAD. The fallback must still surface it.
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	add := exec.Command("git", "add", "a.go")
+	add.Dir = dir
+	if out, err := add.CombinedOutput(); err != nil {
+		t.Fatalf("git add: %s", out)
+	}
+
+	t.Chdir(dir)
+	diff, err := gitDiffHead()
+	if err != nil {
+		t.Fatalf("empty-tree fallback errored: %v", err)
+	}
+	if !strings.Contains(diff, "a.go") {
+		t.Errorf("initial-commit diff must include the staged file, got %q", diff)
+	}
+}
+
+func TestGitDiffHeadNotARepo(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GIT_CEILING_DIRECTORIES", filepath.Dir(dir))
+	t.Chdir(dir)
+	if _, err := gitDiffHead(); err == nil {
+		t.Error("expected an error outside a git repository")
+	}
+}
+
+func TestAppReceiptUsage(t *testing.T) {
+	stderr := &bytes.Buffer{}
+	code := app([]string{"claudiao", "receipt"}, &bytes.Buffer{}, &bytes.Buffer{}, stderr)
+	if code != 1 {
+		t.Errorf("expected exit 1, got %d", code)
 	}
 }

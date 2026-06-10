@@ -353,3 +353,38 @@ If any box is "no" and that surface exists, it is a blocker, not a nit.
 - `SameSite=None` without `Secure`.
 - Dev-only auth bypasses (`?admin=true`, `X-Dev-Role: admin`) that can reach production builds.
 - Swallowing CSP/SRI errors; "just turn it off" is the wrong fix.
+
+## Machine-verified (claudiao check)
+
+High-precision antipatterns from this rule are executed by
+`claudiao check` against the added lines of the diff:
+
+```claudiao-check
+id: tls-verification-disabled
+severity: blocker
+pattern: (verify\s*=\s*False|InsecureSkipVerify\s*:\s*true|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED)
+```
+
+```claudiao-check
+id: eval-on-strings
+severity: blocker
+pattern: \b(eval|exec)\s*\(\s*["'`$]|new Function\s*\(
+```
+
+```claudiao-check
+id: token-in-web-storage
+severity: blocker
+pattern: (localStorage|sessionStorage)\.setItem\s*\(\s*["'][^"']*(token|jwt|secret|key)
+```
+
+```claudiao-check
+id: weak-hash-for-secrets
+severity: major
+pattern: \b(md5|sha1)\s*\(.{0,40}(password|secret|token)
+```
+
+```claudiao-check
+id: math-random-for-secrets
+severity: major
+pattern: Math\.random\s*\(\s*\).{0,60}(token|secret|password|session|id)
+```

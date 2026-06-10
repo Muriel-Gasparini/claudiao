@@ -59,3 +59,11 @@ The `git log` stays readable on its own, years after the spec is gone.
 
 The project configures `.claude/settings.json` with an empty
 `attribution.commit` to prevent automatic trailers.
+
+## Machine-verified (commit hook)
+
+The no-trailer rule is enforced mechanically by the claudiao commit
+gate (`PreToolUse` hook on Bash): any `git commit` whose message
+contains an AI attribution trailer is blocked before it runs. It is
+checked on the commit command itself, not on the diff, so documentation
+that merely mentions trailers does not trigger it.

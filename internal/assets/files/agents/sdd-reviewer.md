@@ -65,7 +65,25 @@ is: empty, null, the wrong type, negative, very large, unicode, with
 embedded newlines/null bytes, with concurrent writes. Report what
 actually happens (not what should happen).
 
-### 4. Check the tests
+### 4. Record the review receipt (when claudiao is installed)
+
+After the review is complete and you have produced the severity table,
+record the chain-of-custody receipt so the commit gate knows this exact
+diff was reviewed:
+
+```
+claudiao receipt create --reviewer sdd-reviewer --summary "blocker:N major:N minor:N"
+```
+
+Run it via Bash from the repository root. If the `claudiao` binary is
+not on PATH, skip silently — the receipt is enforcement infrastructure,
+not part of the review itself. Never create a receipt **before**
+finishing the review, and never create one when unresolved Blockers
+remain: the receipt asserts "this state was reviewed", and the
+fingerprint covers the exact working tree, so any fix applied after
+the receipt invalidates it anyway.
+
+### 5. Check the tests
 
 If new code shipped without tests, that is a finding. If tests exist,
 check whether they would catch a deliberate mutation: invert a

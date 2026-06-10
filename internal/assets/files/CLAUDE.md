@@ -42,6 +42,29 @@ matters**, **never auto-declare safety without evidence**.
 
 If the diff touches any of these, the reviewer runs. Period.
 
+## Mechanized enforcement (when the Hooks module is installed)
+
+The `claudiao` binary enforces parts of this agreement via hooks — they
+are not suggestions, they will block:
+
+- **Commit gate** (`PreToolUse` on Bash): commits with AI attribution
+  trailers are rejected; commits whose diff touches a sensitive area
+  require a valid review receipt (`claudiao receipt create`, recorded by
+  sdd-reviewer after the review). If the code changed after the review,
+  the receipt is stale — re-review.
+- **Auto effort-tiering** (`PostToolUse` on Edit/Write): crossing >50
+  lines / >2 files or touching a sensitive path injects the
+  corresponding obligation once. Treat the injected reminder as part of
+  this agreement.
+- **Claim checker** (`Stop`): a final message claiming safety without
+  the reviewer having run, or claiming tests pass without a test command
+  having run, blocks the stop. Produce the evidence or retract the claim.
+
+Useful commands: `claudiao check` (rule-embedded antipattern checks on
+the diff), `claudiao mutate` (proves the tests around the diff can
+fail), `claudiao stats` (adherence report). Escape hatch, user-approved
+only: `CLAUDIAO_ENFORCE=off` or `CLAUDIAO_SKIP=1` prefix on the commit.
+
 ## Comments policy (code)
 
 Default: **no comments**. The order of preference for clarity is:

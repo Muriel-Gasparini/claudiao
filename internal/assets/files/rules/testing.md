@@ -208,6 +208,21 @@ Brainstorm 3 ways the code could be wrong:
 
 At least one test must fail under each mutation. If none does, tests are missing.
 
+### Executed mutation (required after writing tests, when `claudiao` is available)
+
+Mental mutation is falsifiable — you can convince yourself a test would catch a
+bug when it would not. Replace it with the executed version: **after writing or
+changing non-trivial tests, run `claudiao mutate`** before declaring the tests
+done. It flips operators on the changed lines, runs the suite per mutant in an
+isolated worktree, and reports survivors — concrete proof a test cannot fail.
+
+- Kill every surviving mutant by strengthening the test (not the production
+  code), or explain it as an equivalent mutant.
+- `claudiao mutate --json` feeds the survivors to the `test-fortifier` agent
+  when you want it to write the killing tests for you.
+- This is cheap (one command, deterministic) and replaces the mental check —
+  do not declare "tests pass" or "well covered" with surviving mutants.
+
 ### Actual mutation tools (recommended for critical modules)
 
 - JS/TS: **Stryker**
@@ -422,7 +437,7 @@ Testing code that calls LLMs is different:
 - [ ] 1 edge case test (boundary: 0, 1, max, empty, duplicate)
 - [ ] 1 concurrency test if the code is concurrent
 - [ ] 1 authorization-negative test if the code enforces authz
-- [ ] Mental mutation check passes (3 mutations → 3 failing tests)
+- [ ] Mutation check passes — `claudiao mutate` (executed) with no survivors, or the mental 3-mutation check when the binary is unavailable
 - [ ] No mocks of internal project code
 - [ ] Assertions validate effect, not just invocation
 - [ ] Test data would force obvious bugs to surface (does not coincide with impl)

@@ -37,8 +37,19 @@ func isQuit(cmd tea.Cmd) bool {
 
 func TestDefaultModules(t *testing.T) {
 	mods := defaultModules()
-	if len(mods) != 4 {
-		t.Fatalf("expected 4 modules, got %d", len(mods))
+	if len(mods) != 6 {
+		t.Fatalf("expected 6 modules, got %d", len(mods))
+	}
+	want := map[string]bool{"hooks": false, "skills": false}
+	for _, m := range mods {
+		if _, ok := want[m.ID]; ok {
+			want[m.ID] = true
+		}
+	}
+	for id, found := range want {
+		if !found {
+			t.Errorf("module %q missing from defaults", id)
+		}
 	}
 	for _, m := range mods {
 		if !m.Enabled {
