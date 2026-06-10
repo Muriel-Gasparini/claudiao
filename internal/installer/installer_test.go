@@ -3,6 +3,7 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"testing/fstest"
 )
@@ -443,6 +444,109 @@ func TestApplyNilPlan(t *testing.T) {
 	err := Apply(nil, Request{}, nil)
 	if err == nil {
 		t.Fatal("expected error for nil plan")
+	}
+}
+
+func TestApplyErrorsWhenTargetParentIsFile(t *testing.T) {
+	dir := t.TempDir()
+	assets := fstest.MapFS{"rules/testing.md": {Data: []byte("data\n")}}
+	req := Request{
+		ClaudePath: dir,
+		Assets:     assets,
+		Modules:    []string{"rules"},
+		Mode:       ModeCopy,
+	}
+	// Preview against a clean tree so classify sees a missing target (create).
+	plan, err := Preview(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Only now occupy "rules" with a regular file, so MkdirAll for the target's
+	// parent directory fails when Apply runs.
+	if err := os.WriteFile(filepath.Join(dir, "rules"), []byte("blocker"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Apply(plan, req, nil); err == nil {
+		t.Error("Apply must error when the target directory cannot be created")
+	}
+}
+
+func TestApplyCopyErrorsWhenSourceMissingFromAssets(t *testing.T) {
+	dir := t.TempDir()
+	assets := fstest.MapFS{"rules/testing.md": {Data: []byte("data\n")}}
+	req := Request{
+		ClaudePath: dir,
+		Assets:     assets,
+		Modules:    []string{"rules"},
+		Mode:       ModeCopy,
+	}
+	plan, err := Preview(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Swap the request's FS for one missing the planned source: applyOne's
+	// fs.ReadFile must fail and Apply must propagate it.
+	req.Assets = fstest.MapFS{}
+	if err := Apply(plan, req, nil); err == nil {
+		t.Error("Apply must error when a planned source is absent from the assets FS")
+	}
+}
+
+func TestApplySymlinkErrorsWhenTargetParentIsFile(t *testing.T) {
+	claudePath := t.TempDir()
+	assetsDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(assetsDir, "rules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(assetsDir, "rules", "testing.md"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assets := fstest.MapFS{"rules/testing.md": {Data: []byte("x\n")}}
+	req := Request{
+		ClaudePath: claudePath,
+		Assets:     assets,
+		AssetsDir:  assetsDir,
+		Modules:    []string{"rules"},
+		Mode:       ModeSymlink,
+	}
+	// Preview against a clean target, then make "rules" a file so creating the
+	// symlink's parent dir fails during Apply.
+	plan, err := Preview(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(claudePath, "rules"), []byte("blocker"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Apply(plan, req, nil); err == nil {
+		t.Error("symlink Apply must error when the target parent cannot be created")
+	}
+}
+
+func TestBackupErrorsWhenDestParentIsUnwritable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory write-permission bits are not enforced the same way on Windows")
+	}
+	if os.Getuid() == 0 {
+		t.Skip("root bypasses directory permission checks")
+	}
+	parent := t.TempDir()
+	src := filepath.Join(parent, "src")
+	if err := os.MkdirAll(filepath.Join(src, "rules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "rules", "f.md"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Backup writes to src + ".backup-<ts>" inside parent; make parent
+	// read-only so copyDir's MkdirAll for the backup root fails.
+	if err := os.Chmod(parent, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	if _, err := Backup(src); err == nil {
+		t.Error("Backup must error when the backup destination cannot be written")
 	}
 }
 

@@ -241,6 +241,141 @@ func TestInstallBinaryReportsOnPath(t *testing.T) {
 	}
 }
 
+func TestPathHintBuildsExportSnippet(t *testing.T) {
+	got := PathHint("/home/u/.local/bin")
+	want := `export PATH="/home/u/.local/bin:$PATH"`
+	if got != want {
+		t.Errorf("PathHint = %q, want %q", got, want)
+	}
+}
+
+func TestPathHintTrimsTrailingSeparator(t *testing.T) {
+	// A trailing separator would produce a doubled "//" in PATH; it must be
+	// stripped so the snippet is clean.
+	got := PathHint("/home/u/.local/bin" + string(os.PathSeparator))
+	want := `export PATH="/home/u/.local/bin:$PATH"`
+	if got != want {
+		t.Errorf("PathHint did not trim trailing separator: %q", got)
+	}
+}
+
+func TestDefaultBinDirUsesHomeWhenEnvUnset(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("CLAUDIAO_BIN_DIR", "")
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	d, err := DefaultBinDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(home, ".local", "bin")
+	if d != want {
+		t.Errorf("DefaultBinDir = %q, want %q", d, want)
+	}
+}
+
+func TestInstallBinaryRefusesWhenDestIsAFile(t *testing.T) {
+	srcDir := t.TempDir()
+	src := filepath.Join(srcDir, "src")
+	if err := os.WriteFile(src, []byte("x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	withExecutable(t, src)
+
+	// Point the install dir at an existing regular file: ensureSafeDir must
+	// reject it because it is not a directory.
+	fileDir := filepath.Join(t.TempDir(), "notadir")
+	if err := os.WriteFile(fileDir, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := InstallBinary(fileDir)
+	if err == nil {
+		t.Fatal("must refuse to install when the destination dir is a regular file")
+	}
+}
+
+func TestCopyExecutableErrorsWhenSourceMissing(t *testing.T) {
+	dest := t.TempDir()
+	err := copyExecutable(filepath.Join(t.TempDir(), "does-not-exist"), filepath.Join(dest, "claudiao"))
+	if err == nil {
+		t.Error("copyExecutable must error when the source cannot be opened")
+	}
+	// On failure no destination file may be left behind.
+	if _, statErr := os.Stat(filepath.Join(dest, "claudiao")); statErr == nil {
+		t.Error("destination must not exist after a failed copy")
+	}
+}
+
+func TestCopyExecutableErrorsWhenTempDirUnwritable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory write-permission bits are not enforced the same way on Windows")
+	}
+	if os.Getuid() == 0 {
+		t.Skip("root bypasses directory permission checks")
+	}
+	srcDir := t.TempDir()
+	src := filepath.Join(srcDir, "src")
+	if err := os.WriteFile(src, []byte("payload"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// The destination's parent directory is read-only, so CreateTemp cannot
+	// create the temp file and copyExecutable must surface the error.
+	destDir := t.TempDir()
+	if err := os.Chmod(destDir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(destDir, 0o755) })
+
+	err := copyExecutable(src, filepath.Join(destDir, "claudiao"))
+	if err == nil {
+		t.Error("copyExecutable must error when the temp file cannot be created")
+	}
+}
+
+func TestCopyExecutableSucceedsAndSetsExecutableBit(t *testing.T) {
+	srcDir := t.TempDir()
+	src := filepath.Join(srcDir, "src")
+	if err := os.WriteFile(src, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dest := filepath.Join(t.TempDir(), "claudiao")
+	if err := copyExecutable(src, dest); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o755 {
+		t.Errorf("copied file mode = %v, want 0o755", info.Mode().Perm())
+	}
+	got, _ := os.ReadFile(dest)
+	if string(got) != "payload" {
+		t.Errorf("content not copied: %q", got)
+	}
+}
+
+func TestInstallBinaryReturnsExecPathError(t *testing.T) {
+	orig := execPath
+	execPath = func() (string, error) { return "", os.ErrPermission }
+	t.Cleanup(func() { execPath = orig })
+
+	if _, err := InstallBinary(t.TempDir()); err == nil {
+		t.Error("InstallBinary must propagate an os.Executable error")
+	}
+}
+
+func TestDirOnPathIgnoresEmptyEntries(t *testing.T) {
+	dir := t.TempDir()
+	// A trailing separator yields an empty PATH entry that must be skipped, not
+	// matched against the resolved dir.
+	t.Setenv("PATH", string(os.PathListSeparator)+"/usr/bin")
+	if dirOnPath(dir) {
+		t.Error("empty PATH entries must not be treated as matching the dir")
+	}
+}
+
 // withExecutable points os.Executable at path for the duration of the test.
 func withExecutable(t *testing.T, path string) {
 	t.Helper()
